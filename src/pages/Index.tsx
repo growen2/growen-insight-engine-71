@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/Header";
-import { HeroSection } from "@/components/sections/HeroSection";
-import { FeaturesSection } from "@/components/sections/FeaturesSection";
-import { DiagnosticForm } from "@/components/forms/DiagnosticForm";
+import { ModernHeroSection } from "@/components/enhanced/ModernHeroSection";
+import { ModernFeaturesSection } from "@/components/enhanced/ModernFeaturesSection";
+import { EnhancedDiagnosticForm } from "@/components/enhanced/EnhancedDiagnosticForm";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
 import { LocalFeaturesSection } from "@/components/sections/LocalFeaturesSection";
 
@@ -10,11 +10,13 @@ const Index = () => {
     <div className="min-h-screen">
       <Header />
       <main>
-        <HeroSection />
-        <FeaturesSection />
+        <ModernHeroSection />
+        <ModernFeaturesSection />
         <LocalFeaturesSection />
         <TestimonialsSection />
-        <DiagnosticForm />
+        <div id="diagnosis-section">
+          <EnhancedDiagnosticForm />
+        </div>
       </main>
     </div>
   );

@@ -2,90 +2,150 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Modern Growen Design System - Multi-Market MVP */
 
 @layer base {
   :root {
+    /* Base Colors */
     --background: 210 20% 98%;
     --foreground: 222.2 84% 4.9%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 222.2 84% 4.9%;
 
+    /* Card & Popover */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Growen Brand Colors */
-    --primary: 220 90% 56%; /* Blue primary */
+    /* Enhanced Growen Brand Palette */
+    --primary: 220 90% 56%; /* Premium Blue */
     --primary-foreground: 0 0% 100%;
     --primary-glow: 220 85% 65%;
+    --primary-soft: 220 50% 95%;
 
-    --secondary: 142 76% 36%; /* Green secondary */
+    --secondary: 142 76% 36%; /* Success Green */
     --secondary-foreground: 0 0% 100%;
+    --secondary-soft: 142 50% 95%;
 
-    --accent: 45 93% 58%; /* Golden accent */
+    --accent: 45 93% 58%; /* Golden Highlight */
     --accent-foreground: 222.2 84% 4.9%;
+    --accent-soft: 45 80% 95%;
 
+    /* Extended Palette */
+    --info: 200 95% 60%; /* Information Blue */
+    --info-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* Warning Orange */
+    --warning-foreground: 0 0% 100%;
+    --success: 142 76% 36%; /* Success Green */
+    --success-foreground: 0 0% 100%;
+
+    /* Neutral Tones */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
+    --neutral: 220 13% 91%;
+    --neutral-foreground: 220 9% 46%;
 
+    /* Interactive States */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 220 90% 56%;
 
-    --radius: 0.5rem;
+    /* Design Tokens */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
 
+    /* Spacing Scale */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+
+    /* Animation Timings */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 43% 11% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 43% 11% / 0.1), 0 2px 4px -1px hsl(220 43% 11% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 43% 11% / 0.1), 0 4px 6px -2px hsl(220 43% 11% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(220 43% 11% / 0.1), 0 10px 10px -5px hsl(220 43% 11% / 0.04);
+    --shadow-glow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 0 20px hsl(var(--primary) / 0.15);
+
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
+    /* Base Colors */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
+    --surface: 222.2 84% 6%;
+    --surface-foreground: 210 40% 98%;
 
+    /* Card & Popover */
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
+    /* Enhanced Brand Palette - Dark Mode */
     --primary: 220 90% 56%;
     --primary-foreground: 0 0% 100%;
     --primary-glow: 220 85% 65%;
+    --primary-soft: 220 50% 10%;
 
     --secondary: 142 76% 36%;
     --secondary-foreground: 0 0% 100%;
+    --secondary-soft: 142 50% 10%;
 
     --accent: 45 93% 58%;
     --accent-foreground: 222.2 84% 4.9%;
+    --accent-soft: 45 80% 10%;
 
+    /* Extended Palette - Dark Mode */
+    --info: 200 95% 60%;
+    --info-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Neutral Tones - Dark Mode */
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+    --neutral: 217.2 32.6% 17.5%;
+    --neutral-foreground: 215 20.2% 65.1%;
 
+    /* Interactive States - Dark Mode */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* Shadows - Dark Mode */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -2px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4), 0 10px 10px -5px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 0 1px hsl(var(--primary) / 0.2), 0 0 20px hsl(var(--primary) / 0.25);
+
+    /* Sidebar - Dark Mode */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -103,21 +163,139 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 
-  /* Growen custom gradients */
+  /* Modern Typography */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-hero {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Modern Effects */
+  .glass-effect {
+    backdrop-filter: blur(16px) saturate(180%);
+    background: hsl(var(--background) / 0.75);
+    border: 1px solid hsl(var(--border) / 0.3);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .glass-card {
+    backdrop-filter: blur(12px) saturate(160%);
+    background: hsl(var(--card) / 0.8);
+    border: 1px solid hsl(var(--border) / 0.2);
+    box-shadow: var(--shadow-md);
+  }
+
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn var(--duration-normal) ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp var(--duration-normal) ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn var(--duration-fast) ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Modern Gradients */
   .gradient-primary {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
   }
 
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--accent)) 100%);
   }
 
-  .glass-effect {
-    backdrop-filter: blur(10px);
-    background: hsl(var(--background) / 0.8);
-    border: 1px solid hsl(var(--border) / 0.5);
+  .gradient-surface {
+    background: linear-gradient(145deg, hsl(var(--surface)) 0%, hsl(var(--muted)) 100%);
+  }
+
+  /* Hover Effects */
+  .hover-lift {
+    transition: transform var(--duration-normal) ease, box-shadow var(--duration-normal) ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Focus States */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
+
+@layer components {
+  /* Modern Button Styles */
+  .btn-modern {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 focus-ring disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-gradient {
+    @apply btn-modern gradient-primary text-white hover:opacity-90 hover:scale-105 active:scale-95;
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-glass {
+    @apply btn-modern glass-effect hover:bg-background/90;
+  }
+
+  /* Card Styles */
+  .card-modern {
+    @apply rounded-xl border bg-card p-6 shadow-sm hover-lift;
+  }
+
+  .card-glass {
+    @apply rounded-xl glass-card p-6 hover-lift;
+  }
+
+  /* Input Styles */
+  .input-modern {
+    @apply flex h-12 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
