@@ -2,78 +2,121 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-// Translation resources for multi-market support
+// Angola-focused translation resources
 const resources = {
   'pt-AO': {
     translation: {
       // Navigation
       nav: {
         home: 'Início',
-        about: 'Sobre',
-        pricing: 'Preços',
-        marketplace: 'Marketplace',
-        diagnosis: 'Diagnóstico',
+        about: 'Sobre Nós',
+        pricing: 'Planos',
+        marketplace: 'Parceiros',
+        diagnosis: 'Diagnóstico Grátis',
         login: 'Entrar',
         register: 'Registar',
-        dashboard: 'Painel'
+        dashboard: 'Painel',
+        contact: 'Contacto',
+        testimonials: 'Testemunhos'
       },
       // Hero Section
       hero: {
-        badge: 'Consultoria Inteligente com IA',
-        title: 'Transforme o Seu Negócio em Angola',
-        subtitle: 'Plataforma inteligente de gestão empresarial para empreendedores angolanos. Diagnósticos gratuitos, relatórios com IA, CRM e muito mais.',
+        badge: 'Liderança em Consultoria Empresarial em Angola',
+        title: 'Transforme o Seu Negócio com Tecnologia Angolana',
+        subtitle: 'A primeira plataforma 100% angolana de gestão empresarial inteligente. Diagnósticos gratuitos, relatórios avançados com IA, CRM profissional e muito mais para fazer o seu negócio crescer em Angola.',
         cta: {
-          primary: 'Diagnóstico Gratuito - 100% Angolano',
-          secondary: 'Ver Como Funciona'
+          primary: 'Diagnóstico Gratuito - Feito em Angola',
+          secondary: 'Conhecer a Plataforma'
         },
         benefits: [
-          'Diagnóstico Empresarial Gratuito',
-          'Relatórios com IA Generativa',
-          'CRM e Automações',
-          'Academia Online'
+          'Diagnóstico Empresarial Profissional e Gratuito',
+          'Relatórios Inteligentes com IA Generativa',
+          'CRM Completo com Automações Locais',
+          'Academia Empresarial Angolana',
+          'Parceria com Instituições Financeiras'
         ],
-        trustBadge: 'Já usado por mais de 1.000 empreendedores angolanos'
+        trustBadge: 'Plataforma de confiança de mais de 2.500 empresários angolanos',
+        localBadge: 'Desenvolvido em Angola, para Angola'
       },
       // Features
       features: {
-        title: 'Tudo o que precisa para fazer crescer o seu negócio',
-        subtitle: 'Ferramentas completas para gestão empresarial adaptadas à realidade angolana',
+        title: 'Tecnologia Avançada Adaptada à Realidade Angolana',
+        subtitle: 'Soluções completas e profissionais para empresários que querem crescer no mercado angolano',
         items: {
           diagnosis: {
-            title: 'Diagnóstico Inteligente',
-            description: 'Análise completa do seu negócio com recomendações personalizadas para o mercado angolano'
+            title: 'Diagnóstico Empresarial Inteligente',
+            description: 'Análise profunda e detalhada do seu negócio com recomendações específicas para o mercado angolano e oportunidades locais'
           },
           reports: {
-            title: 'Relatórios com IA',
-            description: 'Relatórios detalhados gerados automaticamente com insights e oportunidades de crescimento'
+            title: 'Relatórios Avançados com IA',
+            description: 'Relatórios executivos completos, gerados por inteligência artificial, com insights de mercado e estratégias de crescimento'
           },
           crm: {
-            title: 'CRM Avançado',
-            description: 'Gestão completa de clientes com automações e integração WhatsApp Business'
+            title: 'CRM Profissional Angolano',
+            description: 'Sistema de gestão de clientes com integração Multicaixa, WhatsApp Business e automações adaptadas ao contexto angolano'
           },
           academy: {
-            title: 'Academia Online',
-            description: 'Cursos e formações especializadas para empreendedores angolanos'
+            title: 'Academia Empresarial Online',
+            description: 'Formação especializada com mentores angolanos e conteúdos focados no empreendedorismo local'
+          },
+          marketplace: {
+            title: 'Rede de Parceiros Locais',
+            description: 'Conecte-se com fornecedores, consultores e especialistas certificados em Angola'
+          },
+          compliance: {
+            title: 'Conformidade Legal Angolana',
+            description: 'Mantenha-se sempre em conformidade com as leis e regulamentações empresariais de Angola'
           }
         }
       },
-      // Market Selection
-      market: {
-        select: 'Selecionar Mercado',
-        angola: 'Angola',
-        brazil: 'Brasil',
-        portugal: 'Portugal',
-        currency: {
-          'AOA': 'Kz',
-          'BRL': 'R$',
-          'EUR': '€'
+      // Pricing
+      pricing: {
+        title: 'Planos Pensados para Empresários Angolanos',
+        subtitle: 'Escolha o plano ideal para o seu negócio, com preços justos em Kwanzas',
+        starter: {
+          name: 'Starter',
+          price: '45.000',
+          features: [
+            'Diagnóstico mensal gratuito',
+            'Relatórios básicos com IA',
+            'CRM para até 100 clientes',
+            'Suporte via WhatsApp',
+            'Integração Multicaixa'
+          ]
+        },
+        professional: {
+          name: 'Profissional',
+          price: '95.000',
+          popular: true,
+          features: [
+            'Tudo do plano Starter',
+            'Relatórios avançados ilimitados',
+            'CRM para até 1.000 clientes',
+            'Automações de marketing',
+            'Academia empresarial',
+            'Suporte prioritário',
+            'Consultoria mensal'
+          ]
+        },
+        enterprise: {
+          name: 'Empresarial',
+          price: '185.000',
+          features: [
+            'Tudo do plano Profissional',
+            'CRM ilimitado',
+            'API personalizada',
+            'Gestor de conta dedicado',
+            'Relatórios personalizados',
+            'Integração com bancos angolanos',
+            'Consultoria semanal'
+          ]
         }
       },
       // Common
       common: {
         loading: 'A carregar...',
         error: 'Erro',
-        success: 'Sucesso',
+        success: 'Sucesso!',
         cancel: 'Cancelar',
         save: 'Guardar',
         continue: 'Continuar',
@@ -81,169 +124,14 @@ const resources = {
         next: 'Próximo',
         finish: 'Finalizar',
         download: 'Descarregar',
-        share: 'Partilhar'
-      }
-    }
-  },
-  'pt-BR': {
-    translation: {
-      // Navigation
-      nav: {
-        home: 'Início',
-        about: 'Sobre',
-        pricing: 'Preços',
-        marketplace: 'Marketplace',
-        diagnosis: 'Diagnóstico',
-        login: 'Entrar',
-        register: 'Cadastrar',
-        dashboard: 'Dashboard'
-      },
-      // Hero Section
-      hero: {
-        badge: 'Consultoria Inteligente com IA',
-        title: 'Transforme o Seu Negócio no Brasil',
-        subtitle: 'Plataforma inteligente de gestão empresarial para empreendedores brasileiros. Diagnósticos gratuitos, relatórios com IA, CRM e muito mais.',
-        cta: {
-          primary: 'Diagnóstico Gratuito - 100% Brasileiro',
-          secondary: 'Ver Como Funciona'
-        },
-        benefits: [
-          'Diagnóstico Empresarial Gratuito',
-          'Relatórios com IA Generativa',
-          'CRM e Automações',
-          'Academia Online'
-        ],
-        trustBadge: 'Já usado por mais de 5.000 empreendedores brasileiros'
-      },
-      // Features
-      features: {
-        title: 'Tudo o que você precisa para fazer seu negócio crescer',
-        subtitle: 'Ferramentas completas para gestão empresarial adaptadas ao mercado brasileiro',
-        items: {
-          diagnosis: {
-            title: 'Diagnóstico Inteligente',
-            description: 'Análise completa do seu negócio com recomendações personalizadas para o mercado brasileiro'
-          },
-          reports: {
-            title: 'Relatórios com IA',
-            description: 'Relatórios detalhados gerados automaticamente com insights e oportunidades de crescimento'
-          },
-          crm: {
-            title: 'CRM Avançado',
-            description: 'Gestão completa de clientes com automações e integração WhatsApp Business'
-          },
-          academy: {
-            title: 'Academia Online',
-            description: 'Cursos e formações especializadas para empreendedores brasileiros'
-          }
-        }
-      },
-      // Market Selection
-      market: {
-        select: 'Selecionar Mercado',
-        angola: 'Angola',
-        brazil: 'Brasil',
-        portugal: 'Portugal',
-        currency: {
-          'AOA': 'Kz',
-          'BRL': 'R$',
-          'EUR': '€'
-        }
-      },
-      // Common
-      common: {
-        loading: 'Carregando...',
-        error: 'Erro',
-        success: 'Sucesso',
-        cancel: 'Cancelar',
-        save: 'Salvar',
-        continue: 'Continuar',
-        back: 'Voltar',
-        next: 'Próximo',
-        finish: 'Finalizar',
-        download: 'Baixar',
-        share: 'Compartilhar'
-      }
-    }
-  },
-  'pt-PT': {
-    translation: {
-      // Navigation
-      nav: {
-        home: 'Início',
-        about: 'Sobre',
-        pricing: 'Preços',
-        marketplace: 'Marketplace',
-        diagnosis: 'Diagnóstico',
-        login: 'Entrar',
-        register: 'Registar',
-        dashboard: 'Painel'
-      },
-      // Hero Section
-      hero: {
-        badge: 'Consultoria Inteligente com IA',
-        title: 'Transforme o Seu Negócio em Portugal',
-        subtitle: 'Plataforma inteligente de gestão empresarial para empreendedores portugueses. Diagnósticos gratuitos, relatórios com IA, CRM e muito mais.',
-        cta: {
-          primary: 'Diagnóstico Gratuito - 100% Português',
-          secondary: 'Ver Como Funciona'
-        },
-        benefits: [
-          'Diagnóstico Empresarial Gratuito',
-          'Relatórios com IA Generativa',
-          'CRM e Automações',
-          'Academia Online'
-        ],
-        trustBadge: 'Já usado por mais de 2.000 empreendedores portugueses'
-      },
-      // Features
-      features: {
-        title: 'Tudo o que precisa para fazer crescer o seu negócio',
-        subtitle: 'Ferramentas completas para gestão empresarial adaptadas ao mercado português',
-        items: {
-          diagnosis: {
-            title: 'Diagnóstico Inteligente',
-            description: 'Análise completa do seu negócio com recomendações personalizadas para o mercado português'
-          },
-          reports: {
-            title: 'Relatórios com IA',
-            description: 'Relatórios detalhados gerados automaticamente com insights e oportunidades de crescimento'
-          },
-          crm: {
-            title: 'CRM Avançado',
-            description: 'Gestão completa de clientes com automações e integração WhatsApp Business'
-          },
-          academy: {
-            title: 'Academia Online',
-            description: 'Cursos e formações especializadas para empreendedores portugueses'
-          }
-        }
-      },
-      // Market Selection
-      market: {
-        select: 'Seleccionar Mercado',
-        angola: 'Angola',
-        brazil: 'Brasil',
-        portugal: 'Portugal',
-        currency: {
-          'AOA': 'Kz',
-          'BRL': 'R$',
-          'EUR': '€'
-        }
-      },
-      // Common
-      common: {
-        loading: 'A carregar...',
-        error: 'Erro',
-        success: 'Sucesso',
-        cancel: 'Cancelar',
-        save: 'Guardar',
-        continue: 'Continuar',
-        back: 'Voltar',
-        next: 'Próximo',
-        finish: 'Finalizar',
-        download: 'Descarregar',
-        share: 'Partilhar'
+        share: 'Partilhar',
+        getStarted: 'Começar Agora',
+        learnMore: 'Saber Mais',
+        inDevelopment: 'Em Desenvolvimento',
+        comingSoon: 'Brevemente',
+        currency: 'Kz',
+        perMonth: '/mês',
+        popular: 'Mais Popular'
       }
     }
   }

@@ -1,5 +1,5 @@
 import { Header } from "@/components/layout/Header";
-import { ModernHeroSection } from "@/components/enhanced/ModernHeroSection";
+import { AngolaHeroSection } from "@/components/enhanced/AngolaHeroSection";
 import { ModernFeaturesSection } from "@/components/enhanced/ModernFeaturesSection";
 import { EnhancedDiagnosticForm } from "@/components/enhanced/EnhancedDiagnosticForm";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
@@ -10,7 +10,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Header />
       <main>
-        <ModernHeroSection />
+        <AngolaHeroSection />
         <ModernFeaturesSection />
         <LocalFeaturesSection />
         <TestimonialsSection />

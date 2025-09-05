@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart3, 
@@ -21,15 +22,15 @@ const Dashboard = () => {
   const kpiCards = [
     {
       title: "Receita Mensal",
-      value: "€25,430",
+      value: "Kz 1.850.000",
       change: "+12.5%",
       trend: "up",
       icon: TrendingUp
     },
     {
       title: "Clientes Ativos",
-      value: "284",
-      change: "+8.2%", 
+      value: "184",
+      change: "+15.2%", 
       trend: "up",
       icon: Users
     },
@@ -42,8 +43,8 @@ const Dashboard = () => {
     },
     {
       title: "CAC Médio",
-      value: "€45",
-      change: "-5.3%",
+      value: "Kz 25.000",
+      change: "-8.3%",
       trend: "down",
       icon: BarChart3
     }
@@ -56,8 +57,8 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard Growen</h1>
-              <p className="text-muted-foreground">Bem-vindo de volta, João Silva</p>
+              <h1 className="text-3xl font-bold gradient-text">Dashboard Growen</h1>
+              <p className="text-muted-foreground">Bem-vindo de volta, <strong>João Silva</strong> • Empresa Angolana</p>
             </div>
             <Button variant="outline">
               <Settings className="w-4 h-4 mr-2" />
@@ -110,10 +111,10 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {[
-                      "Novo cliente registrado: Maria Santos",
-                      "Campanha de email enviada para 150 contatos",
-                      "Relatório mensal gerado",
-                      "3 novos leads qualificados"
+                      "Novo cliente angolano registrado: Maria Santos - Luanda",
+                      "Campanha WhatsApp enviada para 250 contactos",
+                      "Relatório executivo gerado com IA",
+                      "5 novos leads qualificados via Multicaixa"
                     ].map((activity, index) => (
                       <div key={index} className="flex items-center space-x-3">
                         <div className="w-2 h-2 bg-primary rounded-full"></div>
@@ -132,10 +133,10 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {[
-                      { task: "Revisar funil de vendas", priority: "Alta" },
-                      { task: "Atualizar preços produtos", priority: "Média" },
-                      { task: "Criar campanha remarketing", priority: "Alta" },
-                      { task: "Treinar equipe vendas", priority: "Baixa" }
+                      { task: "Optimizar integração com Multicaixa", priority: "Alta" },
+                      { task: "Actualizar preços em Kwanzas", priority: "Média" },
+                      { task: "Campanha para mercado angolano", priority: "Alta" },
+                      { task: "Formação equipa sobre mercado local", priority: "Média" }
                     ].map((item, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <span className="text-sm">{item.task}</span>
@@ -164,8 +165,18 @@ const Dashboard = () => {
                 <CardTitle>Automação de Marketing</CardTitle>
                 <CardDescription>Campanhas e automações ativas</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Módulo de marketing em desenvolvimento...</p>
+              <CardContent className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Marketing Automation</h3>
+                <p className="text-muted-foreground mb-4">
+                  Automações de WhatsApp, Email Marketing e campanhas para o mercado angolano
+                </p>
+                <Badge variant="secondary" className="mb-4">Em Desenvolvimento</Badge>
+                <div className="text-sm text-muted-foreground">
+                  Disponível em: Q2 2024
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -180,8 +191,18 @@ const Dashboard = () => {
                 <CardTitle>Marketplace de Serviços</CardTitle>
                 <CardDescription>Serviços especializados para seu negócio</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Marketplace em desenvolvimento...</p>
+              <CardContent className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Rede de Parceiros Angolanos</h3>
+                <p className="text-muted-foreground mb-4">
+                  Conecte-se com fornecedores, consultores e especialistas certificados em Angola
+                </p>
+                <Badge variant="secondary" className="mb-4">Em Desenvolvimento</Badge>
+                <div className="text-sm text-muted-foreground">
+                  Disponível em: Q3 2024
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -192,8 +213,18 @@ const Dashboard = () => {
                 <CardTitle>Relatórios Inteligentes</CardTitle>
                 <CardDescription>Insights gerados por IA</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Relatórios IA em desenvolvimento...</p>
+              <CardContent className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Relatórios Executivos Avançados</h3>
+                <p className="text-muted-foreground mb-4">
+                  Relatórios personalizados com análise de mercado angolano e projecções financeiras
+                </p>
+                <Badge variant="outline" className="mb-4 text-green-600 border-green-300">Disponível</Badge>
+                <Button variant="outline" size="sm">
+                  Gerar Relatório
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
