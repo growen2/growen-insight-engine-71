@@ -3,12 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import { Phone, Mail } from "lucide-react";
-
 export function Header() {
-  const { t } = useTranslation();
-
-  return (
-    <header className="sticky top-0 z-50 glass-effect border-b border-border/10">
+  const {
+    t
+  } = useTranslation();
+  return <header className="sticky top-0 z-50 glass-effect border-b border-border/10">
       {/* Top bar */}
       <div className="bg-primary/5 py-2">
         <div className="container mx-auto px-4">
@@ -24,9 +23,7 @@ export function Header() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                🇦🇴 Feito em Angola
-              </Badge>
+              <Badge variant="outline" className="text-xs">🇦🇴</Badge>
               <Badge variant="secondary" className="text-xs">
                 Suporte 24/7
               </Badge>
@@ -45,7 +42,7 @@ export function Header() {
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-bold gradient-text">Growen</span>
-              <span className="text-xs text-muted-foreground">Plataforma Empresarial Angolana</span>
+              <span className="text-xs text-muted-foreground font-light">Smart Business Consulting</span>
             </div>
           </Link>
 
@@ -80,6 +77,5 @@ export function Header() {
           </div>
         </nav>
       </div>
-    </header>
-  );
+    </header>;
 }

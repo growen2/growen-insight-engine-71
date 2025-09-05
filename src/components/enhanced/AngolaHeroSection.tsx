@@ -3,20 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Star, Shield, Award } from "lucide-react";
 import { useMarket } from '@/contexts/MarketContext';
-
 export function AngolaHeroSection() {
-  const { t } = useTranslation();
-  const { marketConfig } = useMarket();
-
+  const {
+    t
+  } = useTranslation();
+  const {
+    marketConfig
+  } = useMarket();
   const scrollToDiagnostic = () => {
     const diagnosticSection = document.getElementById('diagnostico');
     if (diagnosticSection) {
-      diagnosticSection.scrollIntoView({ behavior: 'smooth' });
+      diagnosticSection.scrollIntoView({
+        behavior: 'smooth'
+      });
     }
   };
-
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -52,32 +54,24 @@ export function AngolaHeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button 
-              size="lg" 
-              className="text-lg px-8 py-6 gradient-primary text-white hover:scale-105 transition-transform shadow-lg"
-              onClick={scrollToDiagnostic}
-            >
+            <Button size="lg" className="text-lg px-8 py-6 gradient-primary text-white hover:scale-105 transition-transform shadow-lg" onClick={scrollToDiagnostic}>
               {t('hero.cta.primary')}
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="text-lg px-8 py-6 glass-effect hover:scale-105 transition-transform"
-            >
+            <Button variant="outline" size="lg" className="text-lg px-8 py-6 glass-effect hover:scale-105 transition-transform">
               {t('hero.cta.secondary')}
             </Button>
           </div>
 
           {/* Benefits Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {(t('hero.benefits', { returnObjects: true }) as string[]).map((benefit, index) => (
-              <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
+            {(t('hero.benefits', {
+            returnObjects: true
+          }) as string[]).map((benefit, index) => <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
                   <span className="text-left font-medium">{benefit}</span>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
 
           {/* Trust Metrics */}
@@ -105,17 +99,9 @@ export function AngolaHeroSection() {
             <p className="text-lg font-medium text-primary">
               {marketConfig.trustMetric}
             </p>
-            <div className="flex items-center justify-center gap-4 mt-4 text-sm text-muted-foreground">
-              <span>Parceiros oficiais:</span>
-              {marketConfig.localPartners.slice(0, 3).map((partner, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {partner}
-                </Badge>
-              ))}
-            </div>
+            
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
