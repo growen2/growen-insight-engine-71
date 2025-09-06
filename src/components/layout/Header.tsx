@@ -57,7 +57,14 @@ export function Header() {
             <Link to="/parceiros" className="text-muted-foreground hover:text-primary transition-colors font-medium">
               {t('nav.marketplace')}
             </Link>
-            <a href="#diagnostico" className="text-primary hover:text-primary/80 transition-colors font-medium">
+            <a 
+              href="#diagnostico" 
+              className="text-primary hover:text-primary/80 transition-colors font-medium"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('diagnostico')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               {t('nav.diagnosis')}
             </a>
           </div>
@@ -69,11 +76,13 @@ export function Header() {
                 {t('nav.login')}
               </Button>
             </Link>
-            <a href="#diagnostico">
-              <Button size="sm" className="gradient-primary text-white shadow-lg hover:scale-105 transition-transform">
-                {t('nav.diagnosis')} Grátis
-              </Button>
-            </a>
+            <Button 
+              size="sm" 
+              className="gradient-primary text-white shadow-lg hover:scale-105 transition-transform"
+              onClick={() => document.getElementById('diagnostico')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              {t('nav.diagnosis')} Grátis
+            </Button>
           </div>
         </nav>
       </div>

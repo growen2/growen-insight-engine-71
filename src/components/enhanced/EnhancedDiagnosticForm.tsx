@@ -120,10 +120,89 @@ export const EnhancedDiagnosticForm: React.FC = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('Form submitted:', formData);
-    setIsSubmitting(false);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Transform form data to diagnostic data format
+      const diagnosticData = {
+        company_name: formData.companyName,
+        owner_name: 'Proprietário', // Could be collected in form
+        industry: formData.industry,
+        city_country: formData.location || 'Luanda, Angola',
+        monthly_revenue: getRevenueFromRange(formData.revenueRange),
+        employees: getEmployeesFromSize(formData.companySize),
+        has_website: formData.digitalPresence !== 'none',
+        lead_acquisition: formData.digitalPresence || 'Tradicional',
+        goals_12m: [formData.businessGoals, formData.growthAreas].filter(Boolean),
+        score: calculateScore(),
+        category: getCategory()
+      };
+      
+      // Trigger report generation
+      const event = new CustomEvent('generateReport', { detail: diagnosticData });
+      window.dispatchEvent(event);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const getRevenueFromRange = (range: string): number => {
+    switch (range) {
+      case '0-50k': return 25000;
+      case '50k-200k': return 125000;
+      case '200k-500k': return 350000;
+      case '500k-1m': return 750000;
+      case '1m+': return 1500000;
+      default: return 100000;
+    }
+  };
+  
+  const getEmployeesFromSize = (size: string): number => {
+    switch (size) {
+      case '1-5 funcionários': return 3;
+      case '6-20 funcionários': return 13;
+      case '21-50 funcionários': return 35;
+      case '51-200 funcionários': return 125;
+      case 'Mais de 200 funcionários': return 300;
+      default: return 10;
+    }
+  };
+  
+  const calculateScore = (): number => {
+    let score = 50; // Base score
+    
+    // Revenue impact
+    const revenue = getRevenueFromRange(formData.revenueRange);
+    if (revenue > 500000) score += 20;
+    else if (revenue > 200000) score += 10;
+    
+    // Digital presence impact
+    switch (formData.digitalPresence) {
+      case 'advanced': score += 25; break;
+      case 'intermediate': score += 15; break;
+      case 'basic': score += 5; break;
+      default: score -= 10;
+    }
+    
+    // Business maturity
+    const years = parseInt(formData.yearsInBusiness) || 0;
+    if (years > 5) score += 15;
+    else if (years > 2) score += 10;
+    
+    return Math.min(100, Math.max(0, score));
+  };
+  
+  const getCategory = (): 'excelente' | 'bom' | 'atencao' | 'critico' => {
+    const score = calculateScore();
+    if (score >= 80) return 'excelente';
+    if (score >= 65) return 'bom';
+    if (score >= 45) return 'atencao';
+    return 'critico';
   };
 
   const isStepValid = () => {
