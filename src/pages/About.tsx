@@ -5,10 +5,10 @@ import { Users, Heart, Target, Zap } from "lucide-react";
 
 const team = [
   {
-    name: "João Silva",
+    name: "Petilson Pungui",
     role: "CEO & Fundador",
     description: "Empresário angolano com 15 anos de experiência em consultoria empresarial",
-    avatar: "JS"
+    avatar: "PP"
   },
   {
     name: "Maria Santos", 

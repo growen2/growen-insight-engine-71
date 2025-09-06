@@ -57,8 +57,13 @@ export function AngolaHeroSection() {
             <Button size="lg" className="text-lg px-8 py-6 gradient-primary text-white hover:scale-105 transition-transform shadow-lg" onClick={scrollToDiagnostic}>
               {t('hero.cta.primary')}
             </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-6 glass-effect hover:scale-105 transition-transform">
-              {t('hero.cta.secondary')}
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-lg px-8 py-6 glass-effect hover:scale-105 transition-transform"
+              onClick={() => window.location.href = '/como-usar'}
+            >
+              Conhecer a Plataforma
             </Button>
           </div>
 

@@ -51,11 +51,11 @@ export function Header() {
             <Link to="/sobre" className="text-muted-foreground hover:text-primary transition-colors font-medium">
               {t('nav.about')}
             </Link>
-            <Link to="/planos" className="text-muted-foreground hover:text-primary transition-colors font-medium">
-              {t('nav.pricing')}
-            </Link>
             <Link to="/parceiros" className="text-muted-foreground hover:text-primary transition-colors font-medium">
-              {t('nav.marketplace')}
+              Marketplace
+            </Link>
+            <Link to="/como-usar" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+              Como Usar
             </Link>
             <a 
               href="#diagnostico" 
@@ -71,17 +71,21 @@ export function Header() {
 
           {/* CTA Buttons */}
           <div className="flex items-center space-x-3">
-            <Link to="/login">
+            <a 
+              href="https://wa.me/244999999999?text=Olá, gostaria de uma consultoria profissional para o meu negócio"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Button variant="outline" size="sm" className="glass-effect">
-                {t('nav.login')}
+                💬 WhatsApp
               </Button>
-            </Link>
+            </a>
             <Button 
               size="sm" 
               className="gradient-primary text-white shadow-lg hover:scale-105 transition-transform"
               onClick={() => document.getElementById('diagnostico')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              {t('nav.diagnosis')} Grátis
+              Diagnóstico Grátis
             </Button>
           </div>
         </nav>
