@@ -128,10 +128,10 @@ const LandingPage = () => {
               <a href="#features" className="text-slate-600 hover:text-emerald-600 transition-colors">Recursos</a>
               <a href="#pricing" className="text-slate-600 hover:text-emerald-600 transition-colors">Preços</a>
               <a href="#about" className="text-slate-600 hover:text-emerald-600 transition-colors">Sobre</a>
-              <Button variant="outline" onClick={() => window.location.href = '#auth'}>
+              <Button variant="outline" onClick={handleGetStarted}>
                 Entrar
               </Button>
-              <Button onClick={() => window.location.href = '#auth'} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={handleGetStarted} className="bg-emerald-600 hover:bg-emerald-700">
                 Começar Grátis
               </Button>
             </div>
