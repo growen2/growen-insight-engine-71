@@ -152,10 +152,10 @@ const LandingPage = () => {
               <a href="#pricing" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Preços</a>
               <a href="#about" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Sobre</a>
               <div className="px-3 py-2">
-                <Button variant="outline" className="w-full mb-2" onClick={() => window.location.href = '#auth'}>
+                <Button variant="outline" className="w-full mb-2" onClick={handleGetStarted}>
                   Entrar
                 </Button>
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => window.location.href = '#auth'}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleGetStarted}>
                   Começar Grátis
                 </Button>
               </div>
