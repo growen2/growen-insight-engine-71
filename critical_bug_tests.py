@@ -432,6 +432,19 @@ def test_manual_invoice_generation():
         print_test_result("Manual Invoice Generation", False, "No user token or client ID available")
         return False
     
+    # First, update client status to "cliente_ativo" to allow invoice generation
+    update_data = {
+        "status": "cliente_ativo"
+    }
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("PUT", f"/crm/clients/{test_client_id}", update_data, headers=headers)
+    
+    if not response or response.status_code != 200:
+        print_test_result("Manual Invoice Generation", False, "Could not update client status to active")
+        return False
+    
+    # Now generate invoice
     invoice_data = {
         "client_id": test_client_id,
         "service_description": "Consultoria Empresarial Especializada",
@@ -440,7 +453,6 @@ def test_manual_invoice_generation():
         "notes": "Consultoria para otimização de processos"
     }
     
-    headers = {"Authorization": f"Bearer {user_token}"}
     response, error = make_request("POST", "/invoices/generate", invoice_data, headers=headers)
     
     if error:
