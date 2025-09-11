@@ -1507,6 +1507,15 @@ const AuthPage = () => {
               >
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
+              
+              <div className="text-center">
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-emerald-600 hover:text-emerald-700"
+                >
+                  Esqueceu sua senha?
+                </Link>
+              </div>
             </form>
           ) : (
             <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
