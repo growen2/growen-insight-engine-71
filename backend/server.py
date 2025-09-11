@@ -741,108 +741,314 @@ async def get_email_templates(user_id: str = Depends(get_current_user)):
 
 # Enhanced Reports with Custom Generation
 @api_router.post("/reports/generate-custom")
-async def generate_custom_report(report_data: ReportCreate, user_id: str = Depends(get_current_user)):
+async def generate_custom_report(
+    report_request: ReportCreate,
+    user_id: str = Depends(get_current_user)
+):
     if not await check_plan_limits(user_id, "reports"):
-        raise HTTPException(status_code=403, detail="Limite de relatórios atingido para seu plano")
+        raise HTTPException(status_code=403, detail="Limite de relatórios atingido")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Generate report content based on user data
+    clients = await db.clients.find({"user_id": user_id}).to_list(1000)
+    chat_messages = await db.chat_messages.find({"user_id": user_id}).to_list(100)
+    
+    # Create comprehensive report content
+    content_sections = []
+    
+    if "overview" in report_request.sections:
+        content_sections.append(f"""
+        ## Visão Geral do Negócio
+        
+        **Período:** {report_request.period or 'Personalizado'}
+        **Empresa:** {user.get('company', 'Não informado')}
+        **Setor:** {user.get('industry', 'Não informado')}
+        
+        **Métricas Principais:**
+        - Total de Clientes: {len(clients)}
+        - Clientes Ativos: {len([c for c in clients if c.get('status') == 'cliente_ativo'])}
+        - Novos Leads: {len([c for c in clients if c.get('status') == 'lead_novo'])}
+        - Consultas IA Realizadas: {len(chat_messages)}
+        """)
+    
+    if "clients" in report_request.sections and clients:
+        total_value = sum(c.get('value', 0) for c in clients if c.get('value'))
+        content_sections.append(f"""
+        ## Análise de Clientes
+        
+        **Distribuição por Status:**
+        - Novos Leads: {len([c for c in clients if c.get('status') == 'lead_novo'])}
+        - Em Negociação: {len([c for c in clients if c.get('status') == 'em_negociacao'])}
+        - Clientes Ativos: {len([c for c in clients if c.get('status') == 'cliente_ativo'])}
+        - Retidos: {len([c for c in clients if c.get('status') == 'retido'])}
+        
+        **Valor Total do Pipeline:** {total_value:,.0f} Kz
+        
+        **Top 5 Clientes por Valor:**
+        """)
+        
+        top_clients = sorted([c for c in clients if c.get('value')], 
+                           key=lambda x: x.get('value', 0), reverse=True)[:5]
+        for i, client in enumerate(top_clients, 1):
+            content_sections[-1] += f"\n{i}. {client['name']} - {client.get('value', 0):,.0f} Kz"
+    
+    if "performance" in report_request.sections:
+        content_sections.append(f"""
+        ## Performance e Atividade
+        
+        **Atividade da Plataforma:**
+        - Total de Consultas IA: {len(chat_messages)}
+        - Última Atividade: {datetime.now(timezone.utc).strftime('%d/%m/%Y')}
+        
+        **Recomendações:**
+        - {'Continue engajando com leads para conversão' if len([c for c in clients if c.get('status') == 'lead_novo']) > 0 else 'Foque em prospecção de novos leads'}
+        - {'Otimize processos de vendas' if total_value > 0 else 'Defina valores para clientes existentes'}
+        - Use mais a consultoria IA para estratégias personalizadas
+        """)
+    
+    insights = []
+    if report_request.include_insights:
+        insights = [
+            f"Taxa de conversão de leads: {(len([c for c in clients if c.get('status') == 'cliente_ativo']) / max(len(clients), 1) * 100):.1f}%",
+            f"Valor médio por cliente: {(total_value / max(len([c for c in clients if c.get('value')]), 1)):,.0f} Kz",
+            "Recomenda-se aumentar atividade de prospecção" if len(clients) < 50 else "Base de clientes sólida estabelecida"
+        ]
+    
+    # Create report record
+    report = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": report_request.title,
+        "content": "\n\n".join(content_sections),
+        "type": report_request.type,
+        "insights": insights,
+        "period": report_request.period,
+        "date_range": report_request.date_range,
+        "created_at": datetime.now(timezone.utc),
+        "charts_data": {} if report_request.include_charts else None
+    }
+    
+    await db.reports.insert_one(report)
+    
+    return {"message": "Relatório gerado com sucesso!", "report_id": report["id"]}
+
+@api_router.post("/reports/upload-csv")
+async def upload_csv_for_analysis(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user)
+):
+    if not await check_plan_limits(user_id, "reports"):
+        raise HTTPException(status_code=403, detail="Limite de relatórios atingido")
+    
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Apenas arquivos CSV são aceitos")
+    
+    # Check file size (max 5MB)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 5MB.")
     
     try:
-        # Get user's business data
-        user = await db.users.find_one({"id": user_id})
-        clients_query = {"user_id": user_id}
+        # Parse CSV content
+        csv_content = content.decode('utf-8')
+        csv_file = io.StringIO(csv_content)
+        reader = csv.DictReader(csv_file)
+        data = list(reader)
         
-        # Apply date filters if provided
-        if report_data.date_range:
-            start_date = datetime.fromisoformat(report_data.date_range["start"])
-            end_date = datetime.fromisoformat(report_data.date_range["end"])
-            clients_query["created_at"] = {"$gte": start_date, "$lte": end_date}
+        if not data:
+            raise HTTPException(status_code=400, detail="Arquivo CSV vazio ou inválido")
         
-        clients = await db.clients.find(clients_query).to_list(1000)
-        chat_messages = await db.chat_messages.find({"user_id": user_id}).sort("timestamp", -1).limit(100).to_list(100)
+        # Analyze CSV data
+        total_rows = len(data)
+        columns = list(data[0].keys()) if data else []
         
-        # Apply filters
-        if report_data.filters:
-            if "industry" in report_data.filters:
-                clients = [c for c in clients if c.get("industry") == report_data.filters["industry"]]
-            if "status" in report_data.filters:
-                clients = [c for c in clients if c.get("status") == report_data.filters["status"]]
+        # Generate insights based on CSV structure
+        insights = [
+            f"Analisados {total_rows} registros",
+            f"Identificadas {len(columns)} colunas de dados",
+            "Dados processados com sucesso"
+        ]
         
-        # Generate comprehensive business analysis
-        business_summary = f"""
-        RELATÓRIO PERSONALIZADO: {report_data.title}
+        # Detect common business data patterns
+        if any('receita' in col.lower() or 'vendas' in col.lower() or 'valor' in col.lower() for col in columns):
+            insights.append("Dados financeiros detectados - análise de receita disponível")
         
-        Empresa: {user.get('company', 'Não informado')}
-        Período: {report_data.period or 'Personalizado'}
-        Seções solicitadas: {', '.join(report_data.sections)}
+        if any('cliente' in col.lower() or 'nome' in col.lower() for col in columns):
+            insights.append("Dados de clientes identificados")
         
-        DADOS PARA ANÁLISE:
-        - Total de clientes: {len(clients)}
-        - Clientes por status: {get_clients_by_status(clients)}
-        - Indústrias representadas: {get_industries_summary(clients)}
-        - Consultas IA recentes: {len(chat_messages)}
-        - Tópicos de consultoria: {get_consultation_topics(chat_messages)}
+        if any('data' in col.lower() or 'mes' in col.lower() for col in columns):
+            insights.append("Dados temporais encontrados - análise de tendências possível")
         
-        Por favor, gere um relatório executivo detalhado focado no mercado angolano com:
-        1. Sumário executivo
-        2. Análise de clientes e pipeline
-        3. Insights de performance
-        4. Oportunidades identificadas
-        5. Recomendações estratégicas específicas para Angola
-        6. Próximos passos e metas
+        # Create analysis report
+        content = f"""
+        ## Análise de Dados CSV - {file.filename}
         
-        Inclua gráficos conceituais: {'Sim' if report_data.include_charts else 'Não'}
-        Inclua insights avançados: {'Sim' if report_data.include_insights else 'Não'}
+        **Resumo da Análise:**
+        - Total de Registros: {total_rows}
+        - Colunas Identificadas: {len(columns)}
+        - Data de Análise: {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}
+        
+        **Estrutura dos Dados:**
         """
         
-        # Use AI to generate comprehensive report
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=str(uuid.uuid4()),
-            system_message="Você é um consultor de negócios especializado em gerar relatórios executivos detalhados para empresas angolanas."
-        ).with_model("openai", "gpt-4o")
+        for i, col in enumerate(columns[:10], 1):  # Limit to first 10 columns
+            content += f"\n{i}. {col}"
         
-        user_message = UserMessage(text=business_summary)
-        report_content = await chat.send_message(user_message)
+        if len(columns) > 10:
+            content += f"\n... e mais {len(columns) - 10} colunas"
         
-        # Create charts data if requested
-        charts_data = None
-        if report_data.include_charts:
-            charts_data = {
-                "clients_by_status": get_clients_chart_data(clients),
-                "industry_distribution": get_industry_chart_data(clients),
-                "monthly_growth": get_monthly_growth_data(clients),
-                "pipeline_value": get_pipeline_value_data(clients)
-            }
+        content += f"""
         
-        # Generate insights if requested
-        insights = []
-        if report_data.include_insights:
-            insights = generate_business_insights(clients, chat_messages)
+        **Insights Automáticos:**
+        """
         
-        # Create report
-        report = Report(
-            user_id=user_id,
-            title=report_data.title,
-            content=report_content,
-            type=report_data.type,
-            period=report_data.period,
-            date_range=report_data.date_range,
-            filters=report_data.filters,
-            insights=insights,
-            charts_data=charts_data
-        )
+        for insight in insights:
+            content += f"\n• {insight}"
         
-        await db.reports.insert_one(report.dict())
+        content += """
         
-        return {
-            "report_id": report.id,
-            "title": report.title,
-            "content": report_content,
+        **Recomendações:**
+        • Use a consultoria IA para análises mais detalhadas dos dados
+        • Considere implementar dashboards para acompanhamento contínuo
+        • Integre estes dados ao seu CRM para melhor gestão
+        """
+        
+        # Save analysis report
+        report = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "title": f"Análise CSV: {file.filename}",
+            "content": content,
+            "type": "csv_analysis",
             "insights": insights,
-            "charts_data": charts_data
+            "data_source": file.filename,
+            "created_at": datetime.now(timezone.utc),
+            "charts_data": {"total_rows": total_rows, "columns": columns}
         }
         
+        await db.reports.insert_one(report)
+        
+        return {
+            "message": "Arquivo CSV analisado com sucesso!",
+            "report_id": report["id"],
+            "insights": insights,
+            "total_rows": total_rows,
+            "columns": len(columns)
+        }
+        
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Erro ao decodificar arquivo. Certifique-se de que está em UTF-8.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {str(e)}")
+        logger.error(f"Error processing CSV: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao processar arquivo CSV")
+
+@api_router.get("/reports/{report_id}/pdf")
+async def export_report_to_pdf(
+    report_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    # Get report
+    report = await db.reports.find_one({"id": report_id, "user_id": user_id})
+    if not report:
+        raise HTTPException(status_code=404, detail="Relatório não encontrado")
+    
+    # Get user info
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    try:
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            spaceAfter=30,
+            textColor=HexColor('#2ECC71'),
+            alignment=1  # Center alignment
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=20,
+            textColor=HexColor('#1A2930')
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Header
+        story.append(Paragraph("Growen - Smart Business Consulting", title_style))
+        story.append(Paragraph(report['title'], subtitle_style))
+        story.append(Paragraph(f"Cliente: {user['name']}", styles['Normal']))
+        story.append(Paragraph(f"Empresa: {user.get('company', 'N/A')}", styles['Normal']))
+        story.append(Paragraph(f"Data: {report['created_at'].strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        story.append(Spacer(1, 30))
+        
+        # Content
+        content_lines = report['content'].split('\n')
+        for line in content_lines:
+            if line.strip():
+                if line.startswith('##'):
+                    story.append(Paragraph(line.replace('##', '').strip(), subtitle_style))
+                elif line.startswith('**') and line.endswith('**'):
+                    story.append(Paragraph(f"<b>{line.replace('**', '').strip()}</b>", styles['Normal']))
+                else:
+                    story.append(Paragraph(line.strip(), styles['Normal']))
+            story.append(Spacer(1, 10))
+        
+        # Insights section
+        if report.get('insights'):
+            story.append(Spacer(1, 20))
+            story.append(Paragraph("Insights Principais", subtitle_style))
+            for insight in report['insights']:
+                story.append(Paragraph(f"• {insight}", styles['Normal']))
+                story.append(Spacer(1, 8))
+        
+        # Footer
+        story.append(Spacer(1, 50))
+        story.append(Paragraph("© 2025 Growen - Smart Business Consulting para Angola", styles['Normal']))
+        story.append(Paragraph("Democratizando consultoria de negócios através de IA", styles['Normal']))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Return PDF
+        buffer.seek(0)
+        
+        return StreamingResponse(
+            io.BytesIO(buffer.getvalue()),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=growen-relatorio-{report_id[:8]}.pdf"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF for report {report_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar PDF do relatório")
+
+@api_router.get("/reports")
+async def get_user_reports(user_id: str = Depends(get_current_user)):
+    try:
+        reports = await db.reports.find({"user_id": user_id}, {"_id": 0})\
+            .sort("created_at", -1)\
+            .to_list(50)
+        
+        return reports
+        
+    except Exception as e:
+        logger.error(f"Error fetching reports for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar relatórios")
 
 def get_clients_by_status(clients):
     status_count = {}
