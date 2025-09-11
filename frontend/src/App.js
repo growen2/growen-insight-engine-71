@@ -1223,6 +1223,152 @@ const ParceirosPage = () => {
   );
 };
 
+// Contatos Page Component
+const ContatosPage = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <nav className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center">
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">G</span>
+              </div>
+              <span className="ml-2 text-xl font-bold text-slate-900">Growen</span>
+            </Link>
+            <div className="flex items-center space-x-4">
+              <Link to="/" className="text-slate-600 hover:text-emerald-600">Início</Link>
+              <Button onClick={() => navigate('/auth')} className="bg-emerald-600 hover:bg-emerald-700">
+                Começar Grátis
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl font-bold text-slate-900 mb-6">Entre em Contato</h1>
+          <p className="text-xl text-slate-600 leading-relaxed">
+            Estamos aqui para ajudar sua empresa a crescer. Fale conosco!
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-12 mb-16">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Informações de Contato</h2>
+            
+            <div className="space-y-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mr-4">
+                  <Mail className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Email</h3>
+                  <p className="text-slate-600">contato@growen.com</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mr-4">
+                  <Phone className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Telefone</h3>
+                  <p className="text-slate-600">+244 924 123 456</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mr-4">
+                  <MessageCircle className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">WhatsApp</h3>
+                  <p className="text-slate-600">+244 924 123 456</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mr-4">
+                  <MapPin className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Endereço</h3>
+                  <p className="text-slate-600">Luanda, Angola</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Envie uma Mensagem</h2>
+              <form className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome</Label>
+                  <Input id="name" placeholder="Seu nome completo" />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="seu@email.com" />
+                </div>
+                
+                <div>
+                  <Label htmlFor="company">Empresa</Label>
+                  <Input id="company" placeholder="Nome da sua empresa" />
+                </div>
+                
+                <div>
+                  <Label htmlFor="subject">Assunto</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o assunto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="suporte">Suporte Técnico</SelectItem>
+                      <SelectItem value="vendas">Informações de Vendas</SelectItem>
+                      <SelectItem value="parceria">Parceria</SelectItem>
+                      <SelectItem value="feedback">Feedback</SelectItem>
+                      <SelectItem value="outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="message">Mensagem</Label>
+                  <Textarea 
+                    id="message" 
+                    placeholder="Descreva como podemos ajudar..."
+                    rows={4}
+                  />
+                </div>
+                
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  Enviar Mensagem
+                </Button>
+              </form>
+            </Card>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50 rounded-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Pronto para começar?</h2>
+          <p className="text-slate-600 mb-6">
+            Experimente nossa plataforma gratuitamente e veja como podemos transformar seu negócio
+          </p>
+          <Button onClick={() => navigate('/auth')} className="bg-emerald-600 hover:bg-emerald-700">
+            Começar Grátis
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Auth Page Component (without changes, keeping previous implementation)
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
