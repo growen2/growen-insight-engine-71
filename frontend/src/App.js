@@ -185,7 +185,7 @@ const LandingPage = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8" onClick={() => window.location.href = '#auth'}>
+                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8" onClick={handleGetStarted}>
                   Criar Conta Grátis
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
