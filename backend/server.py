@@ -1250,7 +1250,7 @@ async def send_welcome_email(email: str, name: str):
                 
                 <!-- CTA Button -->
                 <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://consultai-1.preview.emergentagent.com/dashboard" 
+                    <a href="https://growen-consult.preview.emergentagent.com/dashboard" 
                        style="display: inline-block; background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
                        Acessar Minha Conta
                     </a>
