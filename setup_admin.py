@@ -4,12 +4,14 @@ Script para configurar usuário como administrador
 """
 import asyncio
 import sys
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
+from pathlib import Path
+from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente
-load_dotenv()
+# Carrega variáveis de ambiente do arquivo .env do backend
+backend_env = Path(__file__).parent / 'backend' / '.env'
+load_dotenv(backend_env)
 
 async def setup_admin(email):
     """Configura um usuário como administrador"""
