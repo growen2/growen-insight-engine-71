@@ -3267,6 +3267,351 @@ async def get_platform_analytics(
         logger.error(f"Error getting platform analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao buscar analytics da plataforma")
 
+# COMPREHENSIVE PARTNER MANAGEMENT SYSTEM
+@api_router.post("/partners", response_model=Partner)
+async def create_partner(partner_data: PartnerCreate):
+    try:
+        partner = Partner(
+            name=partner_data.name,
+            description=partner_data.description,
+            category=partner_data.category,
+            email=partner_data.email,
+            phone=partner_data.phone,
+            website=partner_data.website,
+            services=partner_data.services,
+            location=partner_data.location
+        )
+        
+        await db.partners.insert_one(partner.dict())
+        return partner
+        
+    except Exception as e:
+        logger.error(f"Error creating partner: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao criar parceiro")
+
+@api_router.get("/partners")
+async def get_partners(
+    category: Optional[str] = None,
+    location: Optional[str] = None,
+    status: str = "approved",
+    limit: int = 50
+):
+    try:
+        query = {"status": status}
+        
+        if category:
+            query["category"] = category
+        if location:
+            query["location"] = {"$regex": location, "$options": "i"}
+        
+        partners = await db.partners.find(query, {"_id": 0})\
+            .sort("rating", -1)\
+            .limit(limit)\
+            .to_list(limit)
+        
+        return partners
+        
+    except Exception as e:
+        logger.error(f"Error fetching partners: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar parceiros")
+
+@api_router.get("/partners/{partner_id}")
+async def get_partner(partner_id: str):
+    try:
+        partner = await db.partners.find_one({"id": partner_id}, {"_id": 0})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        return partner
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar parceiro")
+
+@api_router.post("/partners/{partner_id}/rate")
+async def rate_partner(
+    partner_id: str,
+    rating_data: PartnerRating,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Check if partner exists
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        # Check if user already rated this partner
+        existing_rating = await db.partner_ratings.find_one({
+            "partner_id": partner_id,
+            "user_id": user_id
+        })
+        
+        if existing_rating:
+            # Update existing rating
+            await db.partner_ratings.update_one(
+                {"partner_id": partner_id, "user_id": user_id},
+                {"$set": {
+                    "rating": rating_data.rating,
+                    "review": rating_data.review,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+        else:
+            # Create new rating
+            rating_record = {
+                "id": str(uuid.uuid4()),
+                "partner_id": partner_id,
+                "user_id": user_id,
+                "rating": rating_data.rating,
+                "review": rating_data.review,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            await db.partner_ratings.insert_one(rating_record)
+        
+        # Recalculate partner average rating
+        ratings = await db.partner_ratings.find({"partner_id": partner_id}).to_list(1000)
+        avg_rating = sum(r["rating"] for r in ratings) / len(ratings) if ratings else 0
+        
+        await db.partners.update_one(
+            {"id": partner_id},
+            {"$set": {
+                "rating": round(avg_rating, 1),
+                "reviews_count": len(ratings)
+            }}
+        )
+        
+        return {"message": "Avaliação registrada com sucesso!", "new_average": round(avg_rating, 1)}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rating partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao avaliar parceiro")
+
+@api_router.get("/partners/categories")
+async def get_partner_categories():
+    try:
+        # Get unique categories
+        categories = await db.partners.distinct("category", {"status": "approved"})
+        return {"categories": categories}
+        
+    except Exception as e:
+        logger.error(f"Error fetching partner categories: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar categorias")
+
+# ADMIN PARTNER MANAGEMENT
+@api_router.get("/admin/partners/all")
+async def get_all_partners_admin(
+    status: Optional[str] = None,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        partners = await db.partners.find(query, {"_id": 0})\
+            .sort("created_at", -1)\
+            .to_list(200)
+        
+        return {"partners": partners}
+        
+    except Exception as e:
+        logger.error(f"Error fetching all partners: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar parceiros")
+
+@api_router.put("/admin/partners/{partner_id}")
+async def update_partner_admin(
+    partner_id: str,
+    partner_data: PartnerUpdate,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        # Prepare update data
+        update_data = {}
+        for field, value in partner_data.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc)
+            
+            await db.partners.update_one(
+                {"id": partner_id},
+                {"$set": update_data}
+            )
+        
+        return {"message": "Parceiro atualizado com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar parceiro")
+
+@api_router.delete("/admin/partners/{partner_id}")
+async def delete_partner_admin(
+    partner_id: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        # Delete partner and all ratings
+        await db.partners.delete_one({"id": partner_id})
+        await db.partner_ratings.delete_many({"partner_id": partner_id})
+        
+        return {"message": "Parceiro removido com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao deletar parceiro")
+
+@api_router.post("/admin/partners/{partner_id}/approve")
+async def approve_partner_admin(
+    partner_id: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        await db.partners.update_one(
+            {"id": partner_id},
+            {"$set": {"status": "approved", "updated_at": datetime.now(timezone.utc)}}
+        )
+        
+        return {"message": "Parceiro aprovado com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao aprovar parceiro")
+
+@api_router.post("/admin/partners/{partner_id}/reject")
+async def reject_partner_admin(
+    partner_id: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        await db.partners.update_one(
+            {"id": partner_id},
+            {"$set": {"status": "rejected", "updated_at": datetime.now(timezone.utc)}}
+        )
+        
+        return {"message": "Parceiro rejeitado"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rejecting partner {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao rejeitar parceiro")
+
+# ENHANCED ADMIN PASSWORD MANAGEMENT
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def admin_reset_user_password(
+    user_id: str,
+    new_password_data: dict,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        new_password = new_password_data.get("new_password")
+        if not new_password:
+            raise HTTPException(status_code=400, detail="Nova senha é obrigatória")
+        
+        # Hash new password
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "password": hashed_password,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        return {"message": f"Senha do usuário {user['name']} foi redefinida pelo administrador"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error admin resetting password for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao redefinir senha do usuário")
+
+# ENHANCED ADMIN CONTENT MANAGEMENT
+@api_router.put("/admin/content/page/{page_name}")
+async def update_page_content_admin(
+    page_name: str,
+    content_data: dict,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        # Store page content in database
+        page_content = {
+            "page_name": page_name,
+            "content": content_data,
+            "updated_at": datetime.now(timezone.utc),
+            "updated_by": admin_id
+        }
+        
+        # Upsert (insert or update)
+        await db.page_contents.update_one(
+            {"page_name": page_name},
+            {"$set": page_content},
+            upsert=True
+        )
+        
+        return {"message": f"Conteúdo da página {page_name} atualizado com sucesso!"}
+        
+    except Exception as e:
+        logger.error(f"Error updating page content {page_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar conteúdo da página")
+
+@api_router.get("/admin/content/page/{page_name}")
+async def get_page_content_admin(
+    page_name: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        page_content = await db.page_contents.find_one({"page_name": page_name}, {"_id": 0})
+        
+        if not page_content:
+            # Return default content structure
+            default_content = {
+                "page_name": page_name,
+                "content": {},
+                "updated_at": datetime.now(timezone.utc)
+            }
+            return default_content
+        
+        return page_content
+        
+    except Exception as e:
+        logger.error(f"Error fetching page content {page_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar conteúdo da página")
+
 # Invoice Management System
 @api_router.post("/invoices/generate")
 async def generate_invoice(
