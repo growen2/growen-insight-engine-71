@@ -479,7 +479,7 @@ const LandingPage = () => {
           <Button 
             size="lg" 
             className="bg-white text-emerald-600 hover:bg-slate-100 text-lg px-8"
-            onClick={() => window.location.href = '#auth'}
+            onClick={handleGetStarted}
           >
             Criar Conta Grátis
             <ChevronRight className="ml-2 h-5 w-5" />
