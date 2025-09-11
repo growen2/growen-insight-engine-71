@@ -2485,6 +2485,467 @@ async def get_available_plans():
     
     return {"plans": plans}
 
+# Invoice Management System
+@api_router.post("/invoices/generate")
+async def generate_invoice(
+    invoice_data: InvoiceCreate,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Get client info
+        client = await db.clients.find_one({"id": invoice_data.client_id, "user_id": user_id})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        if client.get("status") != "cliente_ativo":
+            raise HTTPException(status_code=400, detail="Apenas clientes ativos podem ter faturas geradas")
+        
+        # Get user info
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Generate unique invoice number
+        invoice_count = await db.invoices.count_documents({"user_id": user_id})
+        invoice_number = f"GROWEN-{user_id[:8].upper()}-{(invoice_count + 1):04d}"
+        
+        # Calculate total
+        total_amount = invoice_data.unit_price * invoice_data.quantity
+        
+        # Create invoice
+        invoice = Invoice(
+            invoice_number=invoice_number,
+            user_id=user_id,
+            client_id=invoice_data.client_id,
+            service_description=invoice_data.service_description,
+            quantity=invoice_data.quantity,
+            unit_price=invoice_data.unit_price,
+            total_amount=total_amount,
+            notes=invoice_data.notes
+        )
+        
+        # Save to database
+        invoice_dict = invoice.dict()
+        await db.invoices.insert_one(invoice_dict)
+        
+        # Generate PDF
+        pdf_path = await generate_invoice_pdf(invoice, user, client)
+        
+        # Update invoice with PDF path
+        await db.invoices.update_one(
+            {"id": invoice.id},
+            {"$set": {"pdf_path": pdf_path}}
+        )
+        
+        return {
+            "message": "Fatura gerada com sucesso!",
+            "invoice_id": invoice.id,
+            "invoice_number": invoice_number,
+            "total_amount": total_amount,
+            "pdf_generated": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating invoice: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar fatura")
+
+@api_router.get("/invoices")
+async def get_user_invoices(user_id: str = Depends(get_current_user)):
+    try:
+        invoices = await db.invoices.find({"user_id": user_id}, {"_id": 0})\
+            .sort("issue_date", -1)\
+            .to_list(100)
+        
+        # Enrich with client information
+        for invoice in invoices:
+            client = await db.clients.find_one({"id": invoice["client_id"]})
+            if client:
+                invoice["client_info"] = {
+                    "name": client["name"],
+                    "email": client["email"],
+                    "company": client.get("company", "")
+                }
+        
+        return invoices
+        
+    except Exception as e:
+        logger.error(f"Error fetching invoices for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar faturas")
+
+@api_router.get("/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Get invoice
+        invoice = await db.invoices.find_one({"id": invoice_id, "user_id": user_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Fatura não encontrada")
+        
+        # Check if PDF exists
+        if not invoice.get("pdf_path") or not Path(invoice["pdf_path"]).exists():
+            # Regenerate PDF if it doesn't exist
+            user = await db.users.find_one({"id": user_id})
+            client = await db.clients.find_one({"id": invoice["client_id"]})
+            
+            if not user or not client:
+                raise HTTPException(status_code=404, detail="Dados necessários não encontrados")
+            
+            pdf_path = await generate_invoice_pdf(Invoice(**invoice), user, client)
+            await db.invoices.update_one(
+                {"id": invoice_id},
+                {"$set": {"pdf_path": pdf_path}}
+            )
+            invoice["pdf_path"] = pdf_path
+        
+        # Return PDF file
+        return FileResponse(
+            invoice["pdf_path"],
+            media_type="application/pdf",
+            filename=f"fatura-{invoice['invoice_number']}.pdf"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading invoice PDF {invoice_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao baixar PDF da fatura")
+
+@api_router.post("/invoices/{invoice_id}/send-email")
+async def send_invoice_by_email(
+    invoice_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Get invoice
+        invoice = await db.invoices.find_one({"id": invoice_id, "user_id": user_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Fatura não encontrada")
+        
+        # Get client and user info
+        client = await db.clients.find_one({"id": invoice["client_id"]})
+        user = await db.users.find_one({"id": user_id})
+        
+        if not client or not user:
+            raise HTTPException(status_code=404, detail="Dados necessários não encontrados")
+        
+        # Generate PDF if it doesn't exist
+        if not invoice.get("pdf_path") or not Path(invoice["pdf_path"]).exists():
+            pdf_path = await generate_invoice_pdf(Invoice(**invoice), user, client)
+            await db.invoices.update_one(
+                {"id": invoice_id},
+                {"$set": {"pdf_path": pdf_path}}
+            )
+            invoice["pdf_path"] = pdf_path
+        
+        # Send email with invoice attachment
+        subject = f"Fatura {invoice['invoice_number']} - {user.get('company', 'Growen')}"
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2ECC71;">Nova Fatura Disponível</h2>
+                
+                <p>Prezado(a) {client['name']},</p>
+                
+                <p>Segue em anexo a fatura número <strong>{invoice['invoice_number']}</strong> referente aos serviços de consultoria empresarial.</p>
+                
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #1A2930;">Detalhes da Fatura:</h3>
+                    <p><strong>Número:</strong> {invoice['invoice_number']}</p>
+                    <p><strong>Data de Emissão:</strong> {invoice['issue_date'].strftime('%d/%m/%Y')}</p>
+                    <p><strong>Vencimento:</strong> {invoice['due_date'].strftime('%d/%m/%Y')}</p>
+                    <p><strong>Valor Total:</strong> {invoice['total_amount']:,.0f} Kz</p>
+                    <p><strong>Serviço:</strong> {invoice['service_description']}</p>
+                </div>
+                
+                <p><strong>Formas de Pagamento:</strong></p>
+                <ul>
+                    <li>Transferência Bancária para o Banco Económico</li>
+                    <li>Pagamento via Multicaixa Express</li>
+                    <li>Entre em contato para outras opções</li>
+                </ul>
+                
+                <p>Para qualquer esclarecimento, entre em contato conosco.</p>
+                
+                <p>Atenciosamente,<br>
+                <strong>{user.get('name', 'Equipe Growen')}</strong><br>
+                {user.get('company', 'Growen - Smart Business Consulting')}</p>
+                
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #666;">
+                    Este email foi enviado automaticamente pela plataforma Growen.<br>
+                    © 2025 Growen - Smart Business Consulting
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # For now, we'll simulate sending (actual SMTP integration would happen here)
+        try:
+            await send_email(client["email"], subject, html_content)
+            
+            # Update invoice with sent date
+            await db.invoices.update_one(
+                {"id": invoice_id},
+                {"$set": {"sent_date": datetime.now(timezone.utc)}}
+            )
+            
+            return {"message": "Fatura enviada por email com sucesso!"}
+            
+        except Exception as email_error:
+            logger.warning(f"Email sending failed for invoice {invoice_id}: {str(email_error)}")
+            return {"message": "Fatura preparada, mas o envio de email falhou. PDF disponível para download."}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending invoice email {invoice_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao enviar fatura por email")
+
+@api_router.put("/invoices/{invoice_id}/status")
+async def update_invoice_status(
+    invoice_id: str,
+    status_data: dict,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        new_status = status_data.get("status")
+        if new_status not in ["pending", "paid", "overdue"]:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        
+        # Get invoice
+        invoice = await db.invoices.find_one({"id": invoice_id, "user_id": user_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Fatura não encontrada")
+        
+        # Update status
+        await db.invoices.update_one(
+            {"id": invoice_id},
+            {"$set": {"payment_status": new_status}}
+        )
+        
+        return {"message": f"Status da fatura atualizado para '{new_status}'"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating invoice status {invoice_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar status da fatura")
+
+@api_router.post("/invoices/auto-generate")
+async def auto_generate_invoices_for_active_clients(user_id: str = Depends(get_current_user)):
+    """Generate invoices automatically for all active clients"""
+    try:
+        # Get all active clients
+        active_clients = await db.clients.find({
+            "user_id": user_id,
+            "status": "cliente_ativo"
+        }).to_list(1000)
+        
+        if not active_clients:
+            return {"message": "Nenhum cliente ativo encontrado", "invoices_generated": 0}
+        
+        generated_invoices = []
+        
+        for client in active_clients:
+            # Check if there's already a recent invoice for this client (within last 30 days)
+            recent_invoice = await db.invoices.find_one({
+                "user_id": user_id,
+                "client_id": client["id"],
+                "issue_date": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+            })
+            
+            if recent_invoice:
+                continue  # Skip if already has recent invoice
+            
+            # Generate invoice number
+            invoice_count = await db.invoices.count_documents({"user_id": user_id})
+            invoice_number = f"GROWEN-{user_id[:8].upper()}-{(invoice_count + len(generated_invoices) + 1):04d}"
+            
+            # Use client value or default service price
+            unit_price = client.get("value", 15000)  # Default 15,000 Kz
+            
+            # Create invoice
+            invoice = Invoice(
+                invoice_number=invoice_number,
+                user_id=user_id,
+                client_id=client["id"],
+                service_description="Consultoria Empresarial mensal com IA",
+                quantity=1,
+                unit_price=unit_price,
+                total_amount=unit_price,
+                notes=f"Fatura automática gerada para cliente ativo: {client['name']}"
+            )
+            
+            # Save to database
+            invoice_dict = invoice.dict()
+            await db.invoices.insert_one(invoice_dict)
+            
+            generated_invoices.append({
+                "client_name": client["name"],
+                "invoice_number": invoice_number,
+                "amount": unit_price
+            })
+        
+        return {
+            "message": f"{len(generated_invoices)} faturas geradas automaticamente",
+            "invoices_generated": len(generated_invoices),
+            "invoices": generated_invoices
+        }
+        
+    except Exception as e:
+        logger.error(f"Error auto-generating invoices: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar faturas automaticamente")
+
+# Invoice PDF Generation Function
+async def generate_invoice_pdf(invoice: Invoice, user: dict, client: dict) -> str:
+    """Generate professional PDF invoice"""
+    try:
+        # Create invoices directory if it doesn't exist
+        invoices_dir = Path("/app/uploads/invoices")
+        invoices_dir.mkdir(parents=True, exist_ok=True)
+        
+        # PDF file path
+        pdf_filename = f"fatura-{invoice.invoice_number}.pdf"
+        pdf_path = invoices_dir / pdf_filename
+        
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(str(pdf_path), pagesize=A4)
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'InvoiceTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=HexColor('#2ECC71'),
+            alignment=1  # Center
+        )
+        
+        header_style = ParagraphStyle(
+            'Header',
+            parent=styles['Heading2'],
+            fontSize=16,
+            spaceAfter=15,
+            textColor=HexColor('#1A2930')
+        )
+        
+        normal_style = ParagraphStyle(
+            'Normal',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceAfter=10
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Header
+        story.append(Paragraph("GROWEN", title_style))
+        story.append(Paragraph("Smart Business Consulting", styles['Heading3']))
+        story.append(Spacer(1, 20))
+        
+        # Invoice details table
+        invoice_data = [
+            ['FATURA', ''],
+            [f'Número: {invoice.invoice_number}', f'Data: {invoice.issue_date.strftime("%d/%m/%Y")}'],
+            ['', f'Vencimento: {invoice.due_date.strftime("%d/%m/%Y")}']
+        ]
+        
+        invoice_table = Table(invoice_data, colWidths=[3*inch, 3*inch])
+        invoice_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#2ECC71')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), HexColor('#F8F9FA')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(invoice_table)
+        story.append(Spacer(1, 30))
+        
+        # Company and client info
+        company_data = [
+            ['EMPRESA', 'CLIENTE'],
+            [f'{user.get("company", "Growen Consulting")}\n{user.get("name", "")}\nLuanda, Angola\ncontato@growen.com', 
+             f'{client["name"]}\n{client.get("company", "")}\n{client["email"]}\n{client.get("phone", "")}']
+        ]
+        
+        company_table = Table(company_data, colWidths=[3*inch, 3*inch])
+        company_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(company_table)
+        story.append(Spacer(1, 30))
+        
+        # Services table
+        services_data = [
+            ['DESCRIÇÃO', 'QTD', 'PREÇO UNIT.', 'TOTAL'],
+            [invoice.service_description, str(invoice.quantity), f'{invoice.unit_price:,.0f} Kz', f'{invoice.total_amount:,.0f} Kz']
+        ]
+        
+        # Add subtotal and total rows
+        services_data.append(['', '', 'SUBTOTAL:', f'{invoice.total_amount:,.0f} Kz'])
+        services_data.append(['', '', 'TOTAL:', f'{invoice.total_amount:,.0f} Kz'])
+        
+        services_table = Table(services_data, colWidths=[3*inch, 0.8*inch, 1.2*inch, 1.2*inch])
+        services_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#2ECC71')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 1), (0, 1), 'LEFT'),  # Description left-aligned
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 2), (-1, -1), 'Helvetica-Bold'),  # Subtotal and total bold
+            ('BACKGROUND', (2, 2), (-1, -1), HexColor('#F0F8F0')),  # Light green for totals
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(services_table)
+        story.append(Spacer(1, 30))
+        
+        # Payment instructions
+        story.append(Paragraph("INSTRUÇÕES DE PAGAMENTO", header_style))
+        story.append(Paragraph("Banco Económico - Conta: 001234567890123", normal_style))
+        story.append(Paragraph("IBAN: AO06 0040 0000 1234 5678 9012 3", normal_style))
+        story.append(Paragraph(f"Referência: {invoice.invoice_number}", normal_style))
+        
+        if invoice.notes:
+            story.append(Spacer(1, 20))
+            story.append(Paragraph("OBSERVAÇÕES", header_style))
+            story.append(Paragraph(invoice.notes, normal_style))
+        
+        # Footer
+        story.append(Spacer(1, 40))
+        story.append(Paragraph("Obrigado pela preferência!", styles['Normal']))
+        story.append(Paragraph("© 2025 Growen - Smart Business Consulting", styles['Normal']))
+        
+        # Build PDF
+        doc.build(story)
+        
+        return str(pdf_path)
+        
+    except Exception as e:
+        logger.error(f"Error generating invoice PDF: {str(e)}")
+        raise Exception(f"Erro ao gerar PDF: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
