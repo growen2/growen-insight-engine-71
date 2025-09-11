@@ -30,6 +30,11 @@ import * as z from 'zod';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 
+// Import remaining components
+import ConsultoriaContent from './components/ConsultoriaContent';
+import CRMContent from './components/CRMContent';
+import { RelatoriosContent, AdminContent, PlanosContent, ConfiguracoesContent, SuccessPage } from './components/RemainingComponents';
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
