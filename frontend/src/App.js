@@ -585,6 +585,7 @@ const LandingPage = () => {
                 <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Preços</button></li>
                 <li><Link to="/como-usar" className="hover:text-white transition-colors">Como Usar</Link></li>
                 <li><Link to="/parceiros" className="hover:text-white transition-colors">Parceiros</Link></li>
+                <li><Link to="/contatos" className="hover:text-white transition-colors">Contatos</Link></li>
               </ul>
             </div>
             
