@@ -665,22 +665,51 @@ const SobrePage = () => {
           <div>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Nossa Missão</h2>
             <p className="text-slate-600 leading-relaxed mb-6">
-              A Growen foi criada com o objetivo de democratizar o acesso a consultoria empresarial de qualidade em Angola. 
-              Utilizamos inteligência artificial de última geração para fornecer insights, análises e recomendações 
-              personalizadas para pequenas e médias empresas.
+              Democratizar o acesso a consultoria empresarial de qualidade através da inteligência artificial, 
+              capacitando PMEs e startups angolanas a crescerem de forma sustentável e competitiva no mercado global.
             </p>
-            <p className="text-slate-600 leading-relaxed">
-              Acreditamos que toda empresa, independentemente do seu tamanho, merece ter acesso a ferramentas poderosas 
-              de gestão e consultoria estratégica.
+            
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Nossa Visão</h2>
+            <p className="text-slate-600 leading-relaxed mb-6">
+              Ser a principal plataforma de consultoria digital em Angola, transformando a forma como as empresas 
+              acessam conhecimento estratégico e implementam soluções inovadoras para seus desafios de negócio.
             </p>
           </div>
           
           <div>
-            <img 
-              src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHRlYW18ZW58MHx8fHwxNzU3NTExODcwfDA&ixlib=rb-4.1.0&q=85"
-              alt="Equipe Growen"
-              className="rounded-lg shadow-lg w-full h-64 object-cover"
-            />
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Conheça Nosso CEO</h2>
+              
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="w-32 h-32 rounded-full overflow-hidden mb-4 shadow-lg">
+                  <img 
+                    src="https://customer-assets.emergentagent.com/job_growen-consult/artifacts/j3crbkvz_profile-pic.png"
+                    alt="Petilson Costa"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Petilson Mara da Costa Pungui</h3>
+                <p className="text-emerald-600 font-semibold">CEO & Fundador</p>
+              </div>
+              
+              <div className="text-slate-600 space-y-3 text-sm leading-relaxed">
+                <p>
+                  Petilson é um empreendedor angolano com paixão por tecnologia, inovação e soluções digitais 
+                  que transformam negócios. Com experiência em desenvolvimento web, marketing digital e gestão de projetos, 
+                  lidera a Growen com foco em criar plataformas inteligentes e seguras para conectar clientes e prestadores de serviços.
+                </p>
+                
+                <p>
+                  Formado em informática e com sólida trajetória em projetos de base tecnológica, Petilson combina visão 
+                  estratégica e criatividade para transformar ideias em produtos digitais funcionais e escaláveis.
+                </p>
+                
+                <p>
+                  Além de empreendedor, Petilson é entusiasta de tecnologias emergentes, especialmente Inteligência Artificial, 
+                  e está constantemente explorando novas formas de otimizar processos e melhorar a experiência do cliente.
+                </p>
+              </div>
+            </Card>
           </div>
         </div>
 
