@@ -244,6 +244,7 @@ const LandingPage = () => {
               <Link to="/sobre" className="text-slate-600 hover:text-emerald-600 transition-colors">Sobre</Link>
               <Link to="/como-usar" className="text-slate-600 hover:text-emerald-600 transition-colors">Como Usar</Link>
               <Link to="/parceiros" className="text-slate-600 hover:text-emerald-600 transition-colors">Parceiros</Link>
+              <Link to="/contatos" className="text-slate-600 hover:text-emerald-600 transition-colors">Contatos</Link>
               <Button variant="outline" onClick={handleGetStarted}>
                 Entrar
               </Button>
