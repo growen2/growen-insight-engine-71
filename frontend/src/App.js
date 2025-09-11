@@ -1309,7 +1309,7 @@ const ContatosPage = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900">Telefone</h3>
-                  <p className="text-slate-600">+244 924 123 456</p>
+                  <p className="text-slate-600">+244 943 201 590</p>
                 </div>
               </div>
               
@@ -1319,7 +1319,7 @@ const ContatosPage = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900">WhatsApp</h3>
-                  <p className="text-slate-600">+244 924 123 456</p>
+                  <p className="text-slate-600">+244 943 201 590</p>
                 </div>
               </div>
               
