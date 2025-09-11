@@ -556,22 +556,83 @@ async def login(login_data: UserLogin):
 
 @api_router.get("/auth/me")
 async def get_current_user_info(user_id: str = Depends(get_current_user)):
-    user = await db.users.find_one({"id": user_id})
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    return {
-        "id": user["id"],
-        "email": user["email"],
-        "name": user["name"],
-        "plan": user.get("plan", "free"),
-        "company": user.get("company"),
-        "phone": user.get("phone"),
-        "industry": user.get("industry"),
-        "picture": user.get("picture"),
-        "is_admin": user.get("is_admin", False),
-        "created_at": user["created_at"]
-    }
+    # Remove password from response
+    user.pop("password", None)
+    return user
+
+@api_router.put("/auth/profile")
+async def update_user_profile(
+    profile_data: UserUpdate,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Get current user
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Prepare update data
+        update_data = {}
+        for field, value in profile_data.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc)
+            
+            # Update user in database
+            result = await db.users.update_one(
+                {"id": user_id},
+                {"$set": update_data}
+            )
+            
+            if result.matched_count == 0:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        return {"message": "Perfil atualizado com sucesso!"}
+        
+    except Exception as e:
+        logger.error(f"Error updating user profile {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.post("/auth/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Get current user
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Verify current password
+        if not bcrypt.checkpw(password_data.current_password.encode('utf-8'), user["password"].encode('utf-8')):
+            raise HTTPException(status_code=400, detail="Senha atual incorreta")
+        
+        # Hash new password
+        hashed_password = bcrypt.hashpw(password_data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "password": hashed_password,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        return {"message": "Senha alterada com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error changing password for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # Enhanced CRM Routes with Email/Phone Integration
 @api_router.post("/crm/clients", response_model=Client)
