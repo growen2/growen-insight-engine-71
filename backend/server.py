@@ -2471,8 +2471,11 @@ async def get_current_plan(user_id: str = Depends(get_current_user)):
         )
         
         return {
+            "name": plan_info["name"],
+            "price_aoa": plan_info["price"],
+            "features": plan_info["features"],
+            "limits": plan_info["limits"],
             "current_plan": current_plan,
-            "plan_info": plan_info,
             "usage": usage,
             "subscription_expires": user.get("subscription_expires"),
             "recent_payment": {
