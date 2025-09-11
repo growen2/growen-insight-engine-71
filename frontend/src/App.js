@@ -379,7 +379,7 @@ const LandingPage = () => {
                   <CheckCircle className="w-4 h-4 text-emerald-600 mr-3" />
                   <span className="text-sm">Dashboard básico</span>
                 </div>
-                <Button className="w-full mt-6" variant="outline" onClick={() => window.location.href = '#auth'}>
+                <Button className="w-full mt-6" variant="outline" onClick={handleGetStarted}>
                   Começar Grátis
                 </Button>
               </CardContent>
