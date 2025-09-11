@@ -175,6 +175,14 @@ class PartnerRating(BaseModel):
     rating: float = Field(ge=1, le=5)
     review: Optional[str] = None
 
+class PartnerReview(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    partner_id: str
+    user_id: str
+    rating: int = Field(ge=1, le=5)
+    comment: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
