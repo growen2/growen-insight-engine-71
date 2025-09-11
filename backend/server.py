@@ -108,6 +108,20 @@ class UserUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    industry: Optional[str] = None
+    value: Optional[float] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
     
     @validator('new_password')
     def validate_new_password(cls, v):
