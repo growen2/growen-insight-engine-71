@@ -1460,7 +1460,7 @@ async def get_chat_history(
         if session_id:
             query["session_id"] = session_id
         
-        messages = await db.chat_messages.find(query)\
+        messages = await db.chat_messages.find(query, {"_id": 0})\
             .sort("created_at", -1)\
             .limit(limit)\
             .to_list(limit)
