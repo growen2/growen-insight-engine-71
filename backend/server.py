@@ -637,22 +637,102 @@ async def change_password(
 # Enhanced CRM Routes with Email/Phone Integration
 @api_router.post("/crm/clients", response_model=Client)
 async def create_client(client_data: ClientCreate, user_id: str = Depends(get_current_user)):
-    if not await check_plan_limits(user_id, "clients"):
-        raise HTTPException(status_code=403, detail="Limite de clientes atingido para seu plano")
-    
-    client = Client(
-        user_id=user_id,
-        name=client_data.name,
-        email=client_data.email,
-        phone=client_data.phone,
-        company=client_data.company,
-        industry=client_data.industry,
-        value=client_data.value,
-        notes=client_data.notes
-    )
-    
-    await db.clients.insert_one(client.dict())
-    return client
+    try:
+        if not await check_plan_limits(user_id, "clients"):
+            raise HTTPException(status_code=403, detail="Limite de clientes atingido para seu plano")
+        
+        client = Client(
+            user_id=user_id,
+            name=client_data.name,
+            email=client_data.email,
+            phone=client_data.phone,
+            company=client_data.company,
+            industry=client_data.industry,
+            value=client_data.value,
+            notes=client_data.notes
+        )
+        
+        await db.clients.insert_one(client.dict())
+        return client
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating client for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.get("/crm/clients")
+async def get_clients(user_id: str = Depends(get_current_user)):
+    try:
+        clients = await db.clients.find({"user_id": user_id}, {"_id": 0})\
+            .sort("created_at", -1)\
+            .to_list(1000)
+        
+        return clients
+        
+    except Exception as e:
+        logger.error(f"Error fetching clients for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar clientes")
+
+@api_router.put("/crm/clients/{client_id}")
+async def update_client(
+    client_id: str,
+    client_data: ClientUpdate,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Check if client belongs to user
+        client = await db.clients.find_one({"id": client_id, "user_id": user_id})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Prepare update data
+        update_data = {}
+        for field, value in client_data.dict(exclude_unset=True).items():
+            if value is not None:
+                update_data[field] = value
+        
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc)
+            
+            # Update client in database
+            result = await db.clients.update_one(
+                {"id": client_id, "user_id": user_id},
+                {"$set": update_data}
+            )
+            
+            if result.matched_count == 0:
+                raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        return {"message": "Cliente atualizado com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating client {client_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.delete("/crm/clients/{client_id}")
+async def delete_client(
+    client_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Check if client belongs to user
+        client = await db.clients.find_one({"id": client_id, "user_id": user_id})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Delete client
+        await db.clients.delete_one({"id": client_id, "user_id": user_id})
+        
+        return {"message": "Cliente removido com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting client {client_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @api_router.post("/crm/clients/{client_id}/send-email")
 async def send_email_to_client(
