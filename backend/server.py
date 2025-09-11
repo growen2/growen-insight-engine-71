@@ -727,6 +727,143 @@ async def change_password(
         logger.error(f"Error changing password for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    try:
+        # Find user by email
+        user = await db.users.find_one({"email": request.email})
+        if not user:
+            # Don't reveal if email exists or not for security
+            return {"message": "Se o email existir em nossa base de dados, você receberá instruções para redefinir sua senha."}
+        
+        # Generate reset token (simple UUID-based token)
+        reset_token = str(uuid.uuid4())
+        
+        # Store reset token with expiration (1 hour)
+        reset_data = {
+            "user_id": user["id"],
+            "token": reset_token,
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
+            "used": False
+        }
+        
+        await db.password_resets.insert_one(reset_data)
+        
+        # Send reset email
+        subject = "Redefinir Senha - Growen"
+        reset_link = f"http://localhost:3000/reset-password?token={reset_token}"
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2ECC71;">Redefinir Senha - Growen</h2>
+                
+                <p>Olá {user['name']},</p>
+                
+                <p>Você solicitou a redefinição da sua senha. Clique no link abaixo para criar uma nova senha:</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_link}" 
+                       style="display: inline-block; background-color: #2ECC71; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                       Redefinir Senha
+                    </a>
+                </div>
+                
+                <p><strong>Importante:</strong></p>
+                <ul>
+                    <li>Este link é válido por apenas 1 hora</li>
+                    <li>Se você não solicitou esta redefinição, ignore este email</li>
+                    <li>Por segurança, nunca compartilhe este link</li>
+                </ul>
+                
+                <p>Caso o botão não funcione, copie e cole este link no seu navegador:</p>
+                <p style="word-break: break-all; color: #666;">{reset_link}</p>
+                
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+                <p style="font-size: 12px; color: #666;">
+                    Este email foi enviado automaticamente pela plataforma Growen.<br>
+                    © 2025 Growen - Smart Business Consulting
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        try:
+            await send_email(user["email"], subject, html_content)
+        except Exception as email_error:
+            logger.warning(f"Failed to send reset email: {str(email_error)}")
+        
+        return {"message": "Se o email existir em nossa base de dados, você receberá instruções para redefinir sua senha."}
+        
+    except Exception as e:
+        logger.error(f"Error in forgot password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.post("/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    try:
+        # Find valid reset token
+        reset_record = await db.password_resets.find_one({
+            "token": request.token,
+            "used": False,
+            "expires_at": {"$gt": datetime.now(timezone.utc)}
+        })
+        
+        if not reset_record:
+            raise HTTPException(status_code=400, detail="Token inválido ou expirado")
+        
+        # Get user
+        user = await db.users.find_one({"id": reset_record["user_id"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Hash new password
+        hashed_password = bcrypt.hashpw(request.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password
+        await db.users.update_one(
+            {"id": reset_record["user_id"]},
+            {"$set": {
+                "password": hashed_password,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Mark token as used
+        await db.password_resets.update_one(
+            {"token": request.token},
+            {"$set": {"used": True}}
+        )
+        
+        return {"message": "Senha redefinida com sucesso! Você pode fazer login com sua nova senha."}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.get("/auth/verify-reset-token/{token}")
+async def verify_reset_token(token: str):
+    try:
+        # Check if token is valid
+        reset_record = await db.password_resets.find_one({
+            "token": token,
+            "used": False,
+            "expires_at": {"$gt": datetime.now(timezone.utc)}
+        })
+        
+        if reset_record:
+            return {"valid": True, "message": "Token válido"}
+        else:
+            return {"valid": False, "message": "Token inválido ou expirado"}
+            
+    except Exception as e:
+        logger.error(f"Error verifying reset token: {str(e)}")
+        return {"valid": False, "message": "Erro ao verificar token"}
+
 # Enhanced CRM Routes with Email/Phone Integration
 @api_router.post("/crm/clients", response_model=Client)
 async def create_client(client_data: ClientCreate, user_id: str = Depends(get_current_user)):
