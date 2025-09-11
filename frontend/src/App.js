@@ -2781,6 +2781,8 @@ function App() {
             <Route path="/parceiros" element={<ParceirosPage />} />
             <Route path="/contatos" element={<ContatosPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/admin/*" element={<AdminDashboard />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/dashboard/success" element={<SuccessPage />} />
