@@ -187,6 +187,38 @@ class ReportCreate(BaseModel):
     include_insights: bool = True
     sections: List[str] = ["overview", "clients", "sales", "performance"]
 
+# Chat and AI Models
+class ChatMessage(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    session_id: str
+    message: str
+    response: str
+    topic: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_used: str = "gpt-4o-mini"
+    tokens_used: Optional[int] = None
+
+class ChatSession(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    topics: List[str] = []
+    message_count: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+    model: str = "gpt-4o-mini"
+
+class ChatResponse(BaseModel):
+    response: str
+    session_id: str
+    message_id: str
+    tokens_used: Optional[int] = None
+
 # Partnership Models
 class Partner(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
