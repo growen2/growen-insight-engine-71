@@ -1629,6 +1629,351 @@ async def delete_chat_session(
         logger.error(f"Error deleting chat session for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao deletar sessão de chat")
 
+# Payment System - Bank Transfer with Receipt Upload
+@api_router.post("/payments/upload-proof")
+async def upload_payment_proof(
+    plan_id: str = Form(...),
+    reference_number: str = Form(None),
+    notes: str = Form(None),
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Validate plan
+        if plan_id not in ["starter", "pro"]:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        # Validate file type
+        allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tipo de arquivo não suportado. Use JPEG, PNG ou PDF."
+            )
+        
+        # Check file size (max 5MB)
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
+        file_content = await file.read()
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 5MB.")
+        
+        # Create uploads directory if it doesn't exist
+        uploads_dir = Path("/app/uploads/payment_proofs")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+        file_path = uploads_dir / unique_filename
+        
+        # Save file
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(file_content)
+        
+        # Get plan amount
+        plan_amounts = {
+            "starter": 10000,  # 10,000 Kz
+            "pro": 20000       # 20,000 Kz
+        }
+        
+        # Create payment proof record
+        payment_proof = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "plan_id": plan_id,
+            "amount": plan_amounts[plan_id],
+            "file_path": str(file_path),
+            "payment_method": "bank_transfer",
+            "status": "pending",
+            "reference_number": reference_number,
+            "notes": notes,
+            "created_at": datetime.now(timezone.utc),
+            "reviewed_at": None,
+            "reviewed_by": None
+        }
+        
+        await db.payment_proofs.insert_one(payment_proof)
+        
+        # Send notification email to admin (could be enhanced)
+        user = await db.users.find_one({"id": user_id})
+        if user:
+            await send_payment_notification_email(user, payment_proof)
+        
+        return {
+            "message": "Comprovante de pagamento enviado com sucesso! Aguarde a análise do administrador.",
+            "payment_id": payment_proof["id"],
+            "status": "pending"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading payment proof for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.get("/payments/status")
+async def get_payment_status(user_id: str = Depends(get_current_user)):
+    try:
+        # Get latest payment proofs for user
+        payments = await db.payment_proofs.find({"user_id": user_id})\
+            .sort("created_at", -1)\
+            .to_list(10)
+        
+        return payments
+        
+    except Exception as e:
+        logger.error(f"Error fetching payment status for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar status de pagamentos")
+
+@api_router.get("/payments/bank-details")
+async def get_bank_details():
+    """Return bank details for manual transfer"""
+    return {
+        "bank_name": "Banco Económico",
+        "account_holder": "Growen Consulting Lda",
+        "account_number": "001234567890123",
+        "iban": "AO06 0040 0000 1234 5678 9012 3",
+        "swift_code": "BESCAOLU",
+        "reference_format": "GROWEN-{USER_ID}",
+        "instructions": [
+            "Faça a transferência para a conta indicada",
+            "Use como referência: GROWEN-{USER_ID}",
+            "Guarde o comprovante de transferência",
+            "Envie o comprovante através da plataforma",
+            "Aguarde a confirmação do pagamento (até 24h úteis)"
+        ]
+    }
+
+# Admin Payment Management
+@api_router.get("/admin/payments/pending")
+async def get_pending_payments(admin_id: str = Depends(get_admin_user)):
+    try:
+        # Get all pending payment proofs
+        payments = await db.payment_proofs.find({"status": "pending"})\
+            .sort("created_at", -1)\
+            .to_list(100)
+        
+        # Enrich with user information
+        for payment in payments:
+            user = await db.users.find_one({"id": payment["user_id"]})
+            if user:
+                payment["user_info"] = {
+                    "name": user["name"],
+                    "email": user["email"],
+                    "company": user.get("company", "")
+                }
+        
+        return payments
+        
+    except Exception as e:
+        logger.error(f"Error fetching pending payments: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar pagamentos pendentes")
+
+@api_router.post("/admin/payments/{payment_id}/review")
+async def review_payment(
+    payment_id: str,
+    review: PaymentReview,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        # Validate status
+        if review.status not in ["approved", "rejected"]:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        
+        # Get payment proof
+        payment = await db.payment_proofs.find_one({"id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+        
+        if payment["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Pagamento já foi revisado")
+        
+        # Update payment status
+        update_data = {
+            "status": review.status,
+            "reviewed_at": datetime.now(timezone.utc),
+            "reviewed_by": admin_id
+        }
+        
+        if review.notes:
+            update_data["admin_notes"] = review.notes
+        
+        await db.payment_proofs.update_one(
+            {"id": payment_id},
+            {"$set": update_data}
+        )
+        
+        # If approved, update user plan
+        if review.status == "approved":
+            user_id = payment["user_id"]
+            plan_id = payment["plan_id"]
+            
+            # Calculate subscription expiry (1 month from now)
+            expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+            
+            await db.users.update_one(
+                {"id": user_id},
+                {
+                    "$set": {
+                        "plan": plan_id,
+                        "subscription_expires": expires_at,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            
+            # Send approval email
+            user = await db.users.find_one({"id": user_id})
+            if user:
+                await send_payment_approved_email(user, payment, plan_id)
+        
+        else:
+            # Send rejection email
+            user = await db.users.find_one({"id": payment["user_id"]})
+            if user:
+                await send_payment_rejected_email(user, payment, review.notes)
+        
+        return {"message": f"Pagamento {review.status} com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reviewing payment {payment_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao revisar pagamento")
+
+@api_router.get("/admin/payments/all")
+async def get_all_payments(
+    status: Optional[str] = None,
+    admin_id: str = Depends(get_admin_user)
+):
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        payments = await db.payment_proofs.find(query)\
+            .sort("created_at", -1)\
+            .to_list(200)
+        
+        # Enrich with user information
+        for payment in payments:
+            user = await db.users.find_one({"id": payment["user_id"]})
+            if user:
+                payment["user_info"] = {
+                    "name": user["name"],
+                    "email": user["email"],
+                    "company": user.get("company", "")
+                }
+        
+        return payments
+        
+    except Exception as e:
+        logger.error(f"Error fetching all payments: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar todos os pagamentos")
+
+# Email notification functions for payments
+async def send_payment_notification_email(user: dict, payment: dict):
+    """Send email to admin about new payment proof"""
+    subject = f"Novo comprovante de pagamento - {user['name']}"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2ECC71;">Novo Comprovante de Pagamento</h2>
+        
+        <p><strong>Cliente:</strong> {user['name']}</p>
+        <p><strong>Email:</strong> {user['email']}</p>
+        <p><strong>Empresa:</strong> {user.get('company', 'N/A')}</p>
+        <p><strong>Plano:</strong> {payment['plan_id'].title()}</p>
+        <p><strong>Valor:</strong> {payment['amount']:,.0f} Kz</p>
+        <p><strong>Referência:</strong> {payment.get('reference_number', 'N/A')}</p>
+        <p><strong>Observações:</strong> {payment.get('notes', 'N/A')}</p>
+        <p><strong>Data:</strong> {payment['created_at'].strftime('%d/%m/%Y %H:%M')}</p>
+        
+        <p>Acesse o painel administrativo para revisar e aprovar/rejeitar o pagamento.</p>
+        
+        <a href="https://growen-consult.preview.emergentagent.com/dashboard/admin" 
+           style="display: inline-block; background-color: #2ECC71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Revisar Pagamento
+        </a>
+    </body>
+    </html>
+    """
+    
+    await send_email("admin@growen.com", subject, html_content)
+
+async def send_payment_approved_email(user: dict, payment: dict, plan_id: str):
+    """Send email to user about payment approval"""
+    subject = "Pagamento Aprovado - Seu plano foi ativado!"
+    
+    plan_names = {"starter": "Starter", "pro": "Profissional"}
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2ECC71;">Pagamento Aprovado! 🎉</h2>
+        
+        <p>Olá {user['name']},</p>
+        
+        <p>Seu pagamento foi aprovado com sucesso e seu plano <strong>{plan_names.get(plan_id, plan_id)}</strong> já está ativo!</p>
+        
+        <p><strong>Detalhes do Pagamento:</strong></p>
+        <ul>
+            <li>Plano: {plan_names.get(plan_id, plan_id)}</li>
+            <li>Valor: {payment['amount']:,.0f} Kz</li>
+            <li>Status: Aprovado</li>
+            <li>Validade: 30 dias a partir de hoje</li>
+        </ul>
+        
+        <p>Agora você tem acesso completo a todas as funcionalidades do seu plano!</p>
+        
+        <a href="https://growen-consult.preview.emergentagent.com/dashboard" 
+           style="display: inline-block; background-color: #2ECC71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Acessar Dashboard
+        </a>
+        
+        <p>Obrigado por escolher a Growen!</p>
+    </body>
+    </html>
+    """
+    
+    await send_email(user["email"], subject, html_content)
+
+async def send_payment_rejected_email(user: dict, payment: dict, notes: Optional[str] = None):
+    """Send email to user about payment rejection"""
+    subject = "Pagamento Não Aprovado - Ação Necessária"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #E74C3C;">Pagamento Não Aprovado</h2>
+        
+        <p>Olá {user['name']},</p>
+        
+        <p>Infelizmente, não foi possível aprovar seu comprovante de pagamento.</p>
+        
+        {f'<p><strong>Motivo:</strong> {notes}</p>' if notes else ''}
+        
+        <p><strong>O que fazer agora:</strong></p>
+        <ul>
+            <li>Verifique se os dados da transferência estão corretos</li>
+            <li>Certifique-se de que usou a referência correta</li>
+            <li>Envie um novo comprovante se necessário</li>
+            <li>Entre em contato conosco se precisar de ajuda</li>
+        </ul>
+        
+        <p>Para mais informações, responda este email ou nos contate pelo WhatsApp: +244 924 123 456</p>
+        
+        <a href="https://growen-consult.preview.emergentagent.com/dashboard/planos" 
+           style="display: inline-block; background-color: #2ECC71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Tentar Novamente
+        </a>
+    </body>
+    </html>
+    """
+    
+    await send_email(user["email"], subject, html_content)
+
 # Include the router in the main app
 app.include_router(api_router)
 
