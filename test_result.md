@@ -142,12 +142,36 @@ backend:
     working: "NA"
     file: "server.py"
     stuck_count: 0
-    priority: "medium"
+    priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "CRM component expects email/call endpoints but they need implementation"
+        comment: "NEXT PRIORITY: Need to implement email sending and call functionality for CRM contacts. Components expect these endpoints."
+
+  - task: "WhatsApp Integration"
+    implemented: false
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement WhatsApp consultation button integration"
+
+  - task: "About/Como Usar/Parceiros Pages"
+    implemented: true
+    working: true
+    file: "App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Pages already implemented in App.js with routing at lines 243-246 and 244-271. SobrePage, ComoUsarPage, ParceirosPage components exist and are functional."
 
   - task: "Report Generation System"
     implemented: false
