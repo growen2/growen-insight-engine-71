@@ -270,6 +270,7 @@ const LandingPage = () => {
               <Link to="/sobre" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Sobre</Link>
               <Link to="/como-usar" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Como Usar</Link>
               <Link to="/parceiros" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Parceiros</Link>
+              <Link to="/contatos" className="block px-3 py-2 text-slate-600 hover:text-emerald-600">Contatos</Link>
               <div className="px-3 py-2">
                 <Button variant="outline" className="w-full mb-2" onClick={handleGetStarted}>
                   Entrar
