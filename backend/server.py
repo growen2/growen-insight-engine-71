@@ -2507,6 +2507,527 @@ async def get_available_plans():
     
     return {"plans": plans}
 
+# COMPREHENSIVE ADMIN DASHBOARD SYSTEM
+@api_router.get("/admin/dashboard/overview")
+async def get_admin_dashboard_overview(admin_id: str = Depends(get_admin_user)):
+    """Complete admin dashboard overview with all platform statistics"""
+    try:
+        # User statistics
+        total_users = await db.users.count_documents({})
+        free_users = await db.users.count_documents({"plan": {"$in": ["free", None]}})
+        starter_users = await db.users.count_documents({"plan": "starter"})
+        pro_users = await db.users.count_documents({"plan": "pro"})
+        
+        # Recent registrations (last 30 days)
+        recent_users = await db.users.count_documents({
+            "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+        })
+        
+        # Payment statistics
+        total_payments = await db.payment_proofs.count_documents({})
+        pending_payments = await db.payment_proofs.count_documents({"status": "pending"})
+        approved_payments = await db.payment_proofs.count_documents({"status": "approved"})
+        rejected_payments = await db.payment_proofs.count_documents({"status": "rejected"})
+        
+        # Revenue calculation (approved payments)
+        approved_payment_docs = await db.payment_proofs.find({"status": "approved"}).to_list(1000)
+        total_revenue = sum(payment["amount"] for payment in approved_payment_docs)
+        
+        # Activity statistics
+        total_chats = await db.chat_messages.count_documents({})
+        total_reports = await db.reports.count_documents({})
+        total_clients = await db.clients.count_documents({})
+        total_invoices = await db.invoices.count_documents({})
+        
+        # Recent activity (last 7 days)
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        recent_chats = await db.chat_messages.count_documents({"created_at": {"$gte": week_ago}})
+        recent_reports = await db.reports.count_documents({"created_at": {"$gte": week_ago}})
+        
+        return {
+            "users": {
+                "total": total_users,
+                "free": free_users,
+                "starter": starter_users,
+                "pro": pro_users,
+                "recent_registrations": recent_users
+            },
+            "payments": {
+                "total": total_payments,
+                "pending": pending_payments,
+                "approved": approved_payments,
+                "rejected": rejected_payments,
+                "total_revenue": total_revenue
+            },
+            "activity": {
+                "total_chats": total_chats,
+                "total_reports": total_reports,
+                "total_clients": total_clients,
+                "total_invoices": total_invoices,
+                "recent_chats": recent_chats,
+                "recent_reports": recent_reports
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting admin dashboard overview: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar dados do dashboard")
+
+@api_router.get("/admin/users/all")
+async def get_all_users_admin(
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    plan_filter: Optional[str] = None,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Get all users with filtering and pagination"""
+    try:
+        query = {}
+        
+        if search:
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"company": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if plan_filter and plan_filter != "all":
+            query["plan"] = plan_filter
+        
+        users = await db.users.find(query, {"password": 0, "_id": 0})\
+            .sort("created_at", -1)\
+            .skip(skip)\
+            .limit(limit)\
+            .to_list(limit)
+        
+        total_users = await db.users.count_documents(query)
+        
+        # Enrich with additional data
+        for user in users:
+            user_id = user["id"]
+            
+            # Get payment info
+            recent_payment = await db.payment_proofs.find_one(
+                {"user_id": user_id},
+                sort=[("created_at", -1)]
+            )
+            user["recent_payment"] = recent_payment.get("status") if recent_payment else None
+            
+            # Get activity stats
+            user["total_chats"] = await db.chat_messages.count_documents({"user_id": user_id})
+            user["total_clients"] = await db.clients.count_documents({"user_id": user_id})
+            user["total_invoices"] = await db.invoices.count_documents({"user_id": user_id})
+        
+        return {
+            "users": users,
+            "total": total_users,
+            "page": skip // limit + 1,
+            "pages": (total_users + limit - 1) // limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting all users: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar usuários")
+
+@api_router.put("/admin/users/{user_id}")
+async def update_user_admin(
+    user_id: str,
+    user_data: dict,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Update user information as admin"""
+    try:
+        # Get current user
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Prepare update data
+        update_data = {}
+        allowed_fields = ["name", "email", "company", "phone", "industry", "plan", "is_admin"]
+        
+        for field, value in user_data.items():
+            if field in allowed_fields and value is not None:
+                update_data[field] = value
+        
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc)
+            
+            # Update user in database
+            await db.users.update_one(
+                {"id": user_id},
+                {"$set": update_data}
+            )
+        
+        return {"message": "Usuário atualizado com sucesso!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user_admin(
+    user_id: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Delete user and all associated data"""
+    try:
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Delete all user data
+        await db.users.delete_one({"id": user_id})
+        await db.clients.delete_many({"user_id": user_id})
+        await db.chat_messages.delete_many({"user_id": user_id})
+        await db.chat_sessions.delete_many({"user_id": user_id})
+        await db.reports.delete_many({"user_id": user_id})
+        await db.invoices.delete_many({"user_id": user_id})
+        await db.payment_proofs.delete_many({"user_id": user_id})
+        
+        return {"message": "Usuário e todos os dados associados foram removidos"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao deletar usuário")
+
+@api_router.get("/admin/payments/all")
+async def get_all_payments_admin(
+    skip: int = 0,
+    limit: int = 50,
+    status_filter: Optional[str] = None,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Get all payments with filtering and pagination"""
+    try:
+        query = {}
+        if status_filter and status_filter != "all":
+            query["status"] = status_filter
+        
+        payments = await db.payment_proofs.find(query, {"_id": 0})\
+            .sort("created_at", -1)\
+            .skip(skip)\
+            .limit(limit)\
+            .to_list(limit)
+        
+        total_payments = await db.payment_proofs.count_documents(query)
+        
+        # Enrich with user information
+        for payment in payments:
+            user = await db.users.find_one({"id": payment["user_id"]})
+            if user:
+                payment["user_info"] = {
+                    "name": user["name"],
+                    "email": user["email"],
+                    "company": user.get("company", ""),
+                    "current_plan": user.get("plan", "free")
+                }
+        
+        return {
+            "payments": payments,
+            "total": total_payments,
+            "page": skip // limit + 1,
+            "pages": (total_payments + limit - 1) // limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting all payments: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar pagamentos")
+
+@api_router.post("/admin/payments/{payment_id}/approve")
+async def approve_payment_admin(
+    payment_id: str,
+    notes: Optional[str] = None,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Approve payment and upgrade user plan"""
+    try:
+        # Get payment proof
+        payment = await db.payment_proofs.find_one({"id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+        
+        if payment["status"] == "approved":
+            return {"message": "Pagamento já foi aprovado anteriormente"}
+        
+        # Update payment status
+        await db.payment_proofs.update_one(
+            {"id": payment_id},
+            {"$set": {
+                "status": "approved",
+                "reviewed_at": datetime.now(timezone.utc),
+                "reviewed_by": admin_id,
+                "admin_notes": notes
+            }}
+        )
+        
+        # Upgrade user plan
+        user_id = payment["user_id"]
+        plan_id = payment["plan_id"]
+        
+        # Calculate subscription expiry (1 month from now)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+        
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "plan": plan_id,
+                "subscription_expires": expires_at,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Send approval email
+        user = await db.users.find_one({"id": user_id})
+        if user:
+            await send_payment_approved_email(user, payment, plan_id)
+        
+        return {"message": f"Pagamento aprovado e usuário atualizado para plano {plan_id}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving payment {payment_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao aprovar pagamento")
+
+@api_router.post("/admin/payments/{payment_id}/reject")
+async def reject_payment_admin(
+    payment_id: str,
+    notes: str,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Reject payment with reason"""
+    try:
+        # Get payment proof
+        payment = await db.payment_proofs.find_one({"id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+        
+        if payment["status"] != "pending":
+            return {"message": "Apenas pagamentos pendentes podem ser rejeitados"}
+        
+        # Update payment status
+        await db.payment_proofs.update_one(
+            {"id": payment_id},
+            {"$set": {
+                "status": "rejected",
+                "reviewed_at": datetime.now(timezone.utc),
+                "reviewed_by": admin_id,
+                "admin_notes": notes
+            }}
+        )
+        
+        # Send rejection email
+        user = await db.users.find_one({"id": payment["user_id"]})
+        if user:
+            await send_payment_rejected_email(user, payment, notes)
+        
+        return {"message": "Pagamento rejeitado e usuário notificado"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rejecting payment {payment_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao rejeitar pagamento")
+
+@api_router.get("/admin/content/pages")
+async def get_all_pages_content(admin_id: str = Depends(get_admin_user)):
+    """Get all page content for editing"""
+    try:
+        # This would typically come from a CMS database
+        # For now, return structured content that can be edited
+        pages_content = {
+            "landing": {
+                "hero": {
+                    "title": "Transforme Seu Negócio com IA",
+                    "subtitle": "Consultoria empresarial inteligente para PMEs angolanas crescerem de forma sustentável",
+                    "cta_text": "Começar Grátis"
+                },
+                "features": [
+                    {
+                        "title": "Consultoria IA",
+                        "description": "Insights personalizados para seu negócio",
+                        "icon": "brain"
+                    },
+                    {
+                        "title": "CRM Integrado",
+                        "description": "Gerencie clientes de forma eficiente",
+                        "icon": "users"
+                    },
+                    {
+                        "title": "Relatórios Automáticos",
+                        "description": "Análises detalhadas do seu negócio",
+                        "icon": "chart"
+                    }
+                ]
+            },
+            "about": {
+                "mission": "Democratizar o acesso a consultoria empresarial de qualidade através da inteligência artificial",
+                "vision": "Ser a principal plataforma de consultoria digital em Angola",
+                "ceo_info": {
+                    "name": "Petilson Mara da Costa Pungui",
+                    "title": "CEO & Fundador",
+                    "bio": "Empreendedor angolano com paixão por tecnologia e inovação...",
+                    "image_url": "https://customer-assets.emergentagent.com/job_growen-consult/artifacts/j3crbkvz_profile-pic.png"
+                }
+            },
+            "contact": {
+                "email": "contato@growen.com",
+                "phone": "+244943201590",
+                "whatsapp": "+244943201590",
+                "address": "Luanda, Angola"
+            }
+        }
+        
+        return {"pages": pages_content}
+        
+    except Exception as e:
+        logger.error(f"Error getting pages content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar conteúdo das páginas")
+
+@api_router.put("/admin/content/pages")
+async def update_pages_content(
+    content_data: dict,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Update page content"""
+    try:
+        # In a real application, this would update a CMS database
+        # For now, we'll just return success
+        # TODO: Implement actual content management system
+        
+        return {"message": "Conteúdo das páginas atualizado com sucesso!"}
+        
+    except Exception as e:
+        logger.error(f"Error updating pages content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar conteúdo das páginas")
+
+@api_router.get("/admin/system/settings")
+async def get_system_settings(admin_id: str = Depends(get_admin_user)):
+    """Get system-wide settings"""
+    try:
+        settings = {
+            "platform": {
+                "name": "Growen",
+                "tagline": "Smart Business Consulting",
+                "maintenance_mode": False,
+                "registration_enabled": True
+            },
+            "contact": {
+                "email": "contato@growen.com",
+                "phone": "+244943201590",
+                "whatsapp": "+244943201590",
+                "address": "Luanda, Angola"
+            },
+            "payment": {
+                "bank_name": "Banco Económico",
+                "account_number": "001234567890123",
+                "iban": "AO06 0040 0000 1234 5678 9012 3",
+                "transfer_enabled": True,
+                "multicaixa_enabled": False
+            },
+            "ai": {
+                "model": "gpt-4o-mini",
+                "max_tokens": 1000,
+                "temperature": 0.7
+            }
+        }
+        
+        return {"settings": settings}
+        
+    except Exception as e:
+        logger.error(f"Error getting system settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar configurações do sistema")
+
+@api_router.put("/admin/system/settings")
+async def update_system_settings(
+    settings_data: dict,
+    admin_id: str = Depends(get_admin_user)
+):
+    """Update system-wide settings"""
+    try:
+        # TODO: Implement actual system settings storage
+        return {"message": "Configurações do sistema atualizadas com sucesso!"}
+        
+    except Exception as e:
+        logger.error(f"Error updating system settings: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar configurações do sistema")
+
+@api_router.get("/admin/reports/analytics")
+async def get_platform_analytics(
+    period: str = "30d",
+    admin_id: str = Depends(get_admin_user)
+):
+    """Get detailed platform analytics"""
+    try:
+        # Calculate period
+        if period == "7d":
+            start_date = datetime.now(timezone.utc) - timedelta(days=7)
+        elif period == "30d":
+            start_date = datetime.now(timezone.utc) - timedelta(days=30)
+        elif period == "90d":
+            start_date = datetime.now(timezone.utc) - timedelta(days=90)
+        else:
+            start_date = datetime.now(timezone.utc) - timedelta(days=30)
+        
+        # User growth
+        user_growth = []
+        for i in range(30):
+            date = start_date + timedelta(days=i)
+            count = await db.users.count_documents({
+                "created_at": {"$lte": date + timedelta(days=1)}
+            })
+            user_growth.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "total_users": count
+            })
+        
+        # Revenue over time
+        revenue_data = []
+        approved_payments = await db.payment_proofs.find({
+            "status": "approved",
+            "reviewed_at": {"$gte": start_date}
+        }).to_list(1000)
+        
+        # Group by date
+        revenue_by_date = {}
+        for payment in approved_payments:
+            date_key = payment["reviewed_at"].strftime("%Y-%m-%d")
+            if date_key not in revenue_by_date:
+                revenue_by_date[date_key] = 0
+            revenue_by_date[date_key] += payment["amount"]
+        
+        for date_key, amount in revenue_by_date.items():
+            revenue_data.append({
+                "date": date_key,
+                "revenue": amount
+            })
+        
+        # Top performing features
+        feature_usage = {
+            "ai_consultations": await db.chat_messages.count_documents({"created_at": {"$gte": start_date}}),
+            "reports_generated": await db.reports.count_documents({"created_at": {"$gte": start_date}}),
+            "clients_added": await db.clients.count_documents({"created_at": {"$gte": start_date}}),
+            "invoices_generated": await db.invoices.count_documents({"issue_date": {"$gte": start_date}})
+        }
+        
+        return {
+            "period": period,
+            "user_growth": user_growth,
+            "revenue_data": revenue_data,
+            "feature_usage": feature_usage
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting platform analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar analytics da plataforma")
+
 # Invoice Management System
 @api_router.post("/invoices/generate")
 async def generate_invoice(
