@@ -247,6 +247,30 @@ class PaymentReview(BaseModel):
     status: str  # approved, rejected
     notes: Optional[str] = None
 
+# Invoice Models  
+class Invoice(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    invoice_number: str
+    user_id: str
+    client_id: str
+    service_description: str = "Consultoria Empresarial com IA"
+    quantity: int = 1
+    unit_price: float
+    total_amount: float
+    payment_status: str = "pending"  # pending, paid, overdue
+    issue_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=30))
+    notes: Optional[str] = None
+    pdf_path: Optional[str] = None
+    sent_date: Optional[datetime] = None
+
+class InvoiceCreate(BaseModel):
+    client_id: str
+    service_description: str = "Consultoria Empresarial com IA"
+    quantity: int = 1
+    unit_price: float
+    notes: Optional[str] = None
+
 # Partnership Models
 class Partner(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
