@@ -26,6 +26,8 @@ admin_token = None
 admin_id = None
 test_session_id = None
 test_payment_id = None
+test_client_id = None
+test_report_id = None
 
 def print_test_result(test_name, success, details=""):
     """Print formatted test results"""
