@@ -114,6 +114,13 @@ class PasswordChange(BaseModel):
     current_password: str
     new_password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
@@ -123,6 +130,50 @@ class ClientUpdate(BaseModel):
     value: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+
+# Partner Models
+class Partner(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    category: str
+    email: str
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    logo_url: Optional[str] = None
+    rating: float = 0.0
+    reviews_count: int = 0
+    services: List[str] = []
+    location: Optional[str] = None
+    status: str = "pending"  # pending, approved, rejected
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartnerCreate(BaseModel):
+    name: str
+    description: str
+    category: str
+    email: str
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    services: List[str] = []
+    location: Optional[str] = None
+
+class PartnerUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    logo_url: Optional[str] = None
+    services: Optional[List[str]] = None
+    location: Optional[str] = None
+    status: Optional[str] = None
+
+class PartnerRating(BaseModel):
+    rating: float = Field(ge=1, le=5)
+    review: Optional[str] = None
 
 class PasswordChange(BaseModel):
     current_password: str
