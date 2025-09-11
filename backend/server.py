@@ -1474,7 +1474,7 @@ async def get_chat_history(
 @api_router.get("/chat/sessions")
 async def get_chat_sessions(user_id: str = Depends(get_current_user)):
     try:
-        sessions = await db.chat_sessions.find({"user_id": user_id})\
+        sessions = await db.chat_sessions.find({"user_id": user_id}, {"_id": 0})\
             .sort("updated_at", -1)\
             .to_list(100)
         
