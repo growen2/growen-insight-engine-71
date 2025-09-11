@@ -15,7 +15,7 @@ import { Separator } from './components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Label } from './components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
-import { AlertCircle, TrendingUp, Users, MessageSquare, FileText, BarChart3, CreditCard, LogOut, Menu, X, ChevronRight, Star, CheckCircle, Zap, Brain, Target, DollarSign, UserPlus, Activity, Settings, Download, Upload, Eye, Edit, Trash2, Plus, Search, Filter, Calendar, Phone, Mail, ExternalLink, ShieldCheck, Clock, Award, ThumbsUp, MapPin, Globe, MessageCircle, Play, BookOpen, HelpCircle, Building, Handshake } from 'lucide-react';
+import { AlertCircle, TrendingUp, Users, MessageSquare, FileText, BarChart3, CreditCard, LogOut, Menu, X, ChevronRight, Star, CheckCircle, Zap, Brain, Target, DollarSign, UserPlus, Activity, Settings, Download, Upload, Eye, Edit, Trash2, Plus, Search, Filter, Calendar, Phone, Mail, ExternalLink, ShieldCheck, Clock, Award, ThumbsUp, MapPin, Globe, MessageCircle, Play, BookOpen, HelpCircle, Building, Handshake, Shield, RefreshCw, Check } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 // Import charts
