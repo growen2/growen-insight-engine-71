@@ -1715,7 +1715,7 @@ async def upload_payment_proof(
 async def get_payment_status(user_id: str = Depends(get_current_user)):
     try:
         # Get latest payment proofs for user
-        payments = await db.payment_proofs.find({"user_id": user_id})\
+        payments = await db.payment_proofs.find({"user_id": user_id}, {"_id": 0})\
             .sort("created_at", -1)\
             .to_list(10)
         
