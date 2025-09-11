@@ -1578,26 +1578,7 @@ const Dashboard = () => {
     }
   };
 
-  const exportChatToPDF = async (sessionId) => {
-    try {
-      const token = localStorage.getItem('growen_token');
-      const response = await axios.post(`${API}/chat/${sessionId}/export-pdf`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `consultoria-growen-${sessionId.substring(0, 8)}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success('PDF baixado com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao exportar PDF');
-    }
-  };
+
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
