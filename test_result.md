@@ -206,8 +206,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "LLM Integration with Emergent Key"
-    - "Payment System - Bank Transfer Workflow"
     - "Component Integration"
   stuck_tasks: []
   test_all: false
