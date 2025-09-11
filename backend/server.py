@@ -58,7 +58,7 @@ EMAIL_USER = os.environ.get('EMAIL_USER', 'admin@growen.com')
 EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD', 'password')
 
 # WhatsApp Configuration
-WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER', '+244924123456')
+WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER', '+244943201590')
 WHATSAPP_MESSAGE = os.environ.get('WHATSAPP_MESSAGE', 'Olá! Gostaria de consultoria especializada através da Growen - Smart Business Consulting')
 
 # Create the main app without a prefix
