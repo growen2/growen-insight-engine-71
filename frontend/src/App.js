@@ -34,6 +34,8 @@ import 'react-phone-number-input/style.css';
 import ConsultoriaContent from './components/ConsultoriaContent';
 import CRMContent from './components/CRMContent';
 import { RelatoriosContent, AdminContent, PlanosContent, ConfiguracoesContent, SuccessPage } from './components/RemainingComponents';
+import ForgotPasswordPage from './components/ForgotPassword';
+import ResetPasswordPage from './components/ResetPassword';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
