@@ -2325,6 +2325,142 @@ async def send_payment_rejected_email(user: dict, payment: dict, notes: Optional
     
     await send_email(user["email"], subject, html_content)
 
+# Plan Management Endpoints
+@api_router.post("/plans/upgrade")
+async def upgrade_user_plan(
+    plan_data: dict,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        new_plan = plan_data.get("plan_id")
+        if new_plan not in ["starter", "pro"]:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        # Get current user
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        current_plan = user.get("plan", "free")
+        
+        # Check if it's actually an upgrade
+        plan_hierarchy = {"free": 0, "starter": 1, "pro": 2}
+        if plan_hierarchy.get(new_plan, 0) <= plan_hierarchy.get(current_plan, 0):
+            raise HTTPException(status_code=400, detail="Apenas upgrades são permitidos. Para downgrades, entre em contato com o suporte.")
+        
+        # For now, we'll mark it as pending payment
+        # This will be completed when payment is approved
+        
+        return {
+            "message": f"Solicitação de upgrade para plano {new_plan.title()} iniciada. Complete o pagamento para ativar.",
+            "new_plan": new_plan,
+            "current_plan": current_plan,
+            "requires_payment": True,
+            "next_step": "upload_payment_proof"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error upgrading plan for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.get("/plans/current")
+async def get_current_plan(user_id: str = Depends(get_current_user)):
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        plan_info = await get_user_plan_info(user_id)
+        
+        # Get recent payment status
+        recent_payment = await db.payment_proofs.find_one(
+            {"user_id": user_id},
+            sort=[("created_at", -1)]
+        )
+        
+        return {
+            "current_plan": plan_info["plan"],
+            "limits": plan_info["limits"],
+            "usage": plan_info["usage"],
+            "subscription_expires": user.get("subscription_expires"),
+            "recent_payment": recent_payment.get("status") if recent_payment else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching plan info for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar informações do plano")
+
+@api_router.get("/plans/available")
+async def get_available_plans():
+    """Get all available plans with pricing and features"""
+    plans = {
+        "free": {
+            "name": "Gratuito",
+            "price": 0,
+            "currency": "Kz",
+            "period": "mês",
+            "features": [
+                "2 consultas IA por mês",
+                "1 relatório por mês",
+                "Até 10 clientes no CRM",
+                "Suporte básico por email"
+            ],
+            "limits": {
+                "ai_chats": 2,
+                "reports": 1,
+                "clients": 10,
+                "email_sends": 5
+            }
+        },
+        "starter": {
+            "name": "Starter",
+            "price": 10000,
+            "currency": "Kz",
+            "period": "mês",
+            "features": [
+                "50 consultas IA por mês",
+                "10 relatórios por mês",
+                "Até 100 clientes no CRM",
+                "Upload de dados CSV",
+                "Envio de emails profissionais",
+                "Suporte prioritário"
+            ],
+            "limits": {
+                "ai_chats": 50,
+                "reports": 10,
+                "clients": 100,
+                "email_sends": 200
+            },
+            "popular": True
+        },
+        "pro": {
+            "name": "Profissional",
+            "price": 20000,
+            "currency": "Kz",
+            "period": "mês",
+            "features": [
+                "Consultas IA ilimitadas",
+                "Relatórios ilimitados",
+                "Clientes ilimitados no CRM",
+                "Todos os recursos do Starter",
+                "Geração automática de faturas",
+                "Integração WhatsApp Business",
+                "Suporte premium 24/7",
+                "Dashboard avançado com métricas"
+            ],
+            "limits": {
+                "ai_chats": -1,  # unlimited
+                "reports": -1,   # unlimited
+                "clients": -1,   # unlimited
+                "email_sends": -1 # unlimited
+            }
+        }
+    }
+    
+    return {"plans": plans}
+
 # Include the router in the main app
 app.include_router(api_router)
 
