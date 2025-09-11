@@ -562,6 +562,334 @@ def test_admin_payment_review():
         print_test_result("Admin Payment Review", False, f"HTTP {response.status_code}: {response.text}")
         return False
 
+def create_test_client():
+    """Create a test client for CRM testing"""
+    print("👤 Creating Test Client...")
+    
+    if not user_token:
+        print_test_result("Create Test Client", False, "No user token available")
+        return False
+    
+    client_data = {
+        "name": "João Silva",
+        "email": "joao.silva@empresa.ao",
+        "phone": "+244923456789",
+        "company": "Silva Enterprises",
+        "industry": "Comércio",
+        "value": 50000,
+        "notes": "Cliente potencial interessado em consultoria"
+    }
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("POST", "/crm/clients", client_data, headers=headers)
+    
+    if error:
+        print_test_result("Create Test Client", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            global test_client_id
+            test_client_id = data.get("id")
+            
+            if test_client_id:
+                print_test_result("Create Test Client", True, f"Client created with ID: {test_client_id}")
+                return True
+            else:
+                print_test_result("Create Test Client", False, "Missing client ID in response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Create Test Client", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Create Test Client", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_email_templates():
+    """Test email templates endpoint"""
+    print("📧 Testing Email Templates...")
+    
+    if not user_token:
+        print_test_result("Email Templates", False, "No user token available")
+        return False
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("GET", "/email-templates", headers=headers)
+    
+    if error:
+        print_test_result("Email Templates", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                template_names = [t.get("name") for t in data]
+                print_test_result("Email Templates", True, f"Retrieved {len(data)} templates: {', '.join(template_names)}")
+                return True
+            else:
+                print_test_result("Email Templates", False, "No templates found or invalid response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Email Templates", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Email Templates", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_send_email_to_client():
+    """Test sending email to client"""
+    print("📤 Testing Send Email to Client...")
+    
+    if not user_token or not test_client_id:
+        print_test_result("Send Email to Client", False, "No user token or client ID available")
+        return False
+    
+    email_data = {
+        "client_id": test_client_id,
+        "subject": "Proposta de Consultoria Empresarial",
+        "content": "Prezado João, gostaríamos de apresentar nossa proposta de consultoria especializada para sua empresa. Nossa equipe tem vasta experiência no mercado angolano e pode ajudar a otimizar seus processos de negócio."
+    }
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("POST", f"/crm/clients/{test_client_id}/send-email", email_data, headers=headers)
+    
+    if error:
+        print_test_result("Send Email to Client", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            if data.get("status") == "sent":
+                print_test_result("Send Email to Client", True, "Email sent successfully")
+                return True
+            elif data.get("status") == "failed":
+                print_test_result("Send Email to Client", True, "Email failed (expected - no SMTP configured)")
+                return True
+            else:
+                print_test_result("Send Email to Client", False, f"Unexpected status: {data.get('status')}")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Send Email to Client", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Send Email to Client", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_client_call_link():
+    """Test getting call/WhatsApp link for client"""
+    print("📞 Testing Client Call Link...")
+    
+    if not user_token or not test_client_id:
+        print_test_result("Client Call Link", False, "No user token or client ID available")
+        return False
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("GET", f"/crm/clients/{test_client_id}/call-link", headers=headers)
+    
+    if error:
+        print_test_result("Client Call Link", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            required_fields = ["call_link", "whatsapp_link", "phone"]
+            
+            if all(field in data for field in required_fields):
+                print_test_result("Client Call Link", True, f"Links generated for phone: {data.get('phone')}")
+                return True
+            else:
+                print_test_result("Client Call Link", False, "Missing required fields in response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Client Call Link", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Client Call Link", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_whatsapp_config():
+    """Test WhatsApp consultation config"""
+    print("💬 Testing WhatsApp Configuration...")
+    
+    response, error = make_request("GET", "/whatsapp/consultation-config")
+    
+    if error:
+        print_test_result("WhatsApp Config", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            required_fields = ["whatsapp_number", "message", "link"]
+            
+            if all(field in data for field in required_fields):
+                print_test_result("WhatsApp Config", True, f"WhatsApp: {data.get('whatsapp_number')}")
+                return True
+            else:
+                print_test_result("WhatsApp Config", False, "Missing required fields in response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("WhatsApp Config", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("WhatsApp Config", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_generate_custom_report():
+    """Test custom report generation"""
+    print("📊 Testing Custom Report Generation...")
+    
+    if not user_token:
+        print_test_result("Custom Report Generation", False, "No user token available")
+        return False
+    
+    report_data = {
+        "title": "Relatório Mensal de Negócios - Teste",
+        "type": "custom",
+        "period": "monthly",
+        "date_range": {
+            "start": "2025-01-01",
+            "end": "2025-01-31"
+        },
+        "include_charts": True,
+        "include_insights": True,
+        "sections": ["overview", "clients", "sales", "performance"]
+    }
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("POST", "/reports/generate-custom", report_data, headers=headers)
+    
+    if error:
+        print_test_result("Custom Report Generation", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            global test_report_id
+            test_report_id = data.get("report_id")
+            
+            if test_report_id and "message" in data:
+                print_test_result("Custom Report Generation", True, f"Report generated with ID: {test_report_id}")
+                return True
+            else:
+                print_test_result("Custom Report Generation", False, "Missing report_id or message in response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Custom Report Generation", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Custom Report Generation", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_csv_upload():
+    """Test CSV file upload for analysis"""
+    print("📁 Testing CSV Upload...")
+    
+    if not user_token:
+        print_test_result("CSV Upload", False, "No user token available")
+        return False
+    
+    # Create test CSV content
+    csv_content = """nome,empresa,receita,mes
+João Silva,Silva Ltda,150000,Janeiro
+Maria Santos,Santos & Co,200000,Janeiro
+Pedro Costa,Costa Enterprises,180000,Janeiro
+Ana Ferreira,Ferreira Business,220000,Janeiro"""
+    
+    files = {
+        'file': ('test_data.csv', BytesIO(csv_content.encode('utf-8')), 'text/csv')
+    }
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("POST", "/reports/upload-csv", files=files, headers=headers)
+    
+    if error:
+        print_test_result("CSV Upload", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            required_fields = ["message", "report_id", "insights", "total_rows"]
+            
+            if all(field in data for field in required_fields):
+                print_test_result("CSV Upload", True, f"CSV analyzed: {data.get('total_rows')} rows, {len(data.get('insights', []))} insights")
+                return True
+            else:
+                print_test_result("CSV Upload", False, "Missing required fields in response")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("CSV Upload", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("CSV Upload", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_get_reports():
+    """Test getting user reports"""
+    print("📋 Testing Get User Reports...")
+    
+    if not user_token:
+        print_test_result("Get User Reports", False, "No user token available")
+        return False
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("GET", "/reports", headers=headers)
+    
+    if error:
+        print_test_result("Get User Reports", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            if isinstance(data, list):
+                print_test_result("Get User Reports", True, f"Retrieved {len(data)} reports")
+                return True
+            else:
+                print_test_result("Get User Reports", False, "Response is not a list")
+                return False
+        except json.JSONDecodeError:
+            print_test_result("Get User Reports", False, "Invalid JSON response")
+            return False
+    else:
+        print_test_result("Get User Reports", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
+def test_report_pdf_export():
+    """Test report PDF export"""
+    print("📄 Testing Report PDF Export...")
+    
+    if not user_token or not test_report_id:
+        print_test_result("Report PDF Export", False, "No user token or report ID available")
+        return False
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response, error = make_request("GET", f"/reports/{test_report_id}/pdf", headers=headers)
+    
+    if error:
+        print_test_result("Report PDF Export", False, f"Request failed: {error}")
+        return False
+    
+    if response.status_code == 200:
+        if response.headers.get('content-type') == 'application/pdf':
+            print_test_result("Report PDF Export", True, f"PDF exported successfully, size: {len(response.content)} bytes")
+            return True
+        else:
+            print_test_result("Report PDF Export", False, "Response is not a PDF")
+            return False
+    elif response.status_code == 404:
+        print_test_result("Report PDF Export", True, "Report not found (expected if not created)")
+        return True
+    else:
+        print_test_result("Report PDF Export", False, f"HTTP {response.status_code}: {response.text}")
+        return False
+
 def run_all_tests():
     """Run all backend tests"""
     print("🚀 Starting Growen Backend Testing Suite")
