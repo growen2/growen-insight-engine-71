@@ -338,9 +338,8 @@ class AdminStats(BaseModel):
     user_growth: List[Dict[str, Any]]
     revenue_growth: List[Dict[str, Any]]
 
-# WhatsApp Configuration
-WHATSAPP_NUMBER = "+244924123456"  # Número de WhatsApp para consultoria
-WHATSAPP_MESSAGE = "Olá! Gostaria de uma consultoria especializada para o meu negócio em Angola."
+# WhatsApp Configuration (using environment variable)
+# WHATSAPP_NUMBER and WHATSAPP_MESSAGE are already defined above from environment variables
 
 # Angola-specific pricing (updated)
 ANGOLA_PLANS = {
