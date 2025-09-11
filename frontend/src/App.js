@@ -99,10 +99,15 @@ const AuthProvider = ({ children }) => {
 const LandingPage = () => {
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  const handleGetStarted = () => {
+    navigate('/auth');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
