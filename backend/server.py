@@ -2368,7 +2368,7 @@ async def send_payment_rejected_email(user: dict, payment: dict, notes: Optional
     
     await send_email(user["email"], subject, html_content)
 
-# Plan Management Endpoints
+# Plan Management Endpoints - FIXED VERSION
 @api_router.post("/plans/upgrade")
 async def upgrade_user_plan(
     plan_data: dict,
@@ -2391,14 +2391,27 @@ async def upgrade_user_plan(
         if plan_hierarchy.get(new_plan, 0) <= plan_hierarchy.get(current_plan, 0):
             raise HTTPException(status_code=400, detail="Apenas upgrades são permitidos. Para downgrades, entre em contato com o suporte.")
         
-        # For now, we'll mark it as pending payment
-        # This will be completed when payment is approved
+        # Check if there's already a pending payment for this user
+        existing_payment = await db.payment_proofs.find_one({
+            "user_id": user_id,
+            "status": "pending"
+        })
+        
+        if existing_payment:
+            return {
+                "message": "Você já possui um pagamento pendente. Aguarde a aprovação ou envie um novo comprovante.",
+                "requires_payment": True,
+                "payment_id": existing_payment["id"],
+                "next_step": "wait_approval_or_upload_new"
+            }
         
         return {
-            "message": f"Solicitação de upgrade para plano {new_plan.title()} iniciada. Complete o pagamento para ativar.",
+            "message": f"Solicitação de upgrade para plano {new_plan.title()} iniciada. Faça o pagamento e envie o comprovante.",
             "new_plan": new_plan,
             "current_plan": current_plan,
             "requires_payment": True,
+            "amount": 10000 if new_plan == "starter" else 20000,
+            "currency": "Kz",
             "next_step": "upload_payment_proof"
         }
         
@@ -2415,7 +2428,42 @@ async def get_current_plan(user_id: str = Depends(get_current_user)):
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
         
-        plan_info = await get_user_plan_info(user_id)
+        current_plan = user.get("plan", "free")
+        
+        # Get plan details
+        plan_details = {
+            "free": {
+                "name": "Gratuito",
+                "price": 0,
+                "currency": "Kz",
+                "limits": {"ai_chats": 2, "reports": 1, "clients": 10, "email_sends": 5},
+                "features": ["2 consultas IA por mês", "1 relatório por mês", "Até 10 clientes no CRM"]
+            },
+            "starter": {
+                "name": "Starter",
+                "price": 10000,
+                "currency": "Kz", 
+                "limits": {"ai_chats": 50, "reports": 10, "clients": 100, "email_sends": 200},
+                "features": ["50 consultas IA por mês", "10 relatórios por mês", "Até 100 clientes no CRM"]
+            },
+            "pro": {
+                "name": "Profissional",
+                "price": 20000,
+                "currency": "Kz",
+                "limits": {"ai_chats": -1, "reports": -1, "clients": -1, "email_sends": -1},
+                "features": ["Consultas IA ilimitadas", "Relatórios ilimitados", "Clientes ilimitados no CRM"]
+            }
+        }
+        
+        plan_info = plan_details.get(current_plan, plan_details["free"])
+        
+        # Get usage statistics
+        usage = {
+            "ai_chats": await db.chat_messages.count_documents({"user_id": user_id}),
+            "reports": await db.reports.count_documents({"user_id": user_id}),
+            "clients": await db.clients.count_documents({"user_id": user_id}),
+            "email_sends": 0  # TODO: Implement email send tracking
+        }
         
         # Get recent payment status
         recent_payment = await db.payment_proofs.find_one(
@@ -2424,14 +2472,15 @@ async def get_current_plan(user_id: str = Depends(get_current_user)):
         )
         
         return {
-            "name": plan_info["name"],
-            "limits": plan_info["limits"],
-            "usage": plan_info["usage"],
-            "features": plan_info["features"],
-            "price_aoa": plan_info["price_aoa"],
-            "price_usd": plan_info["price_usd"],
+            "current_plan": current_plan,
+            "plan_info": plan_info,
+            "usage": usage,
             "subscription_expires": user.get("subscription_expires"),
-            "recent_payment": recent_payment.get("status") if recent_payment else None
+            "recent_payment": {
+                "status": recent_payment.get("status"),
+                "created_at": recent_payment.get("created_at"),
+                "plan_id": recent_payment.get("plan_id")
+            } if recent_payment else None
         }
         
     except Exception as e:
