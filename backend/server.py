@@ -1326,6 +1326,285 @@ async def send_welcome_email(email: str, name: str):
     
     await send_email(email, subject, html_content)
 
+# Chat and AI Consultation Endpoints
+@api_router.post("/chat", response_model=ChatResponse)
+async def send_chat_message(
+    chat_request: ChatRequest,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Check user plan limits
+        plan_info = await get_user_plan_info(user_id)
+        if not plan_info:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Check if user has exceeded monthly limit
+        if plan_info["limits"]["ai_chats"] != -1:  # -1 means unlimited
+            if plan_info["usage"]["ai_chats"] >= plan_info["limits"]["ai_chats"]:
+                raise HTTPException(
+                    status_code=429, 
+                    detail=f"Limite mensal de {plan_info['limits']['ai_chats']} consultas IA atingido. Faça upgrade do seu plano."
+                )
+        
+        # Get or create session
+        session_id = chat_request.session_id
+        if not session_id:
+            # Create new session
+            session_id = str(uuid.uuid4())
+            session_data = {
+                "id": session_id,
+                "user_id": user_id,
+                "title": chat_request.message[:50] + "..." if len(chat_request.message) > 50 else chat_request.message,
+                "topics": [],
+                "message_count": 0,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            await db.chat_sessions.insert_one(session_data)
+        
+        # Prepare system message for Angolan business context
+        system_message = """Você é um consultor de negócios especializado no mercado angolano. Você tem conhecimento profundo sobre:
+
+1. O ambiente empresarial de Angola
+2. Regulamentações e políticas empresariais locais
+3. Desafios específicos das PMEs angolanas
+4. Oportunidades de mercado em Angola
+5. Práticas de negócios culturalmente apropriadas
+6. Economia angolana e suas particularidades
+
+Forneça respostas práticas, contextualizadas para Angola e sempre em português. Seja direto, profissional e ofereça insights acionáveis. Quando relevante, mencione aspectos específicos do mercado angolano como diversificação econômica, infraestrutura, recursos naturais, e desenvolvimento do setor privado.
+
+Sempre termine suas respostas com uma pergunta de follow-up para manter o diálogo produtivo."""
+
+        # Initialize chat with Emergent LLM
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=session_id,
+            system_message=system_message
+        ).with_model("openai", chat_request.model)
+        
+        # Send message
+        user_message = UserMessage(text=chat_request.message)
+        response = await chat.send_message(user_message)
+        
+        # Generate message ID
+        message_id = str(uuid.uuid4())
+        
+        # Save chat message to database
+        chat_message = {
+            "id": message_id,
+            "user_id": user_id,
+            "session_id": session_id,
+            "message": chat_request.message,
+            "response": response,
+            "topic": None,  # Could be enhanced with topic extraction
+            "created_at": datetime.now(timezone.utc),
+            "model_used": chat_request.model,
+            "tokens_used": None  # Could be enhanced with token counting
+        }
+        
+        await db.chat_messages.insert_one(chat_message)
+        
+        # Update session
+        await db.chat_sessions.update_one(
+            {"id": session_id},
+            {
+                "$set": {"updated_at": datetime.now(timezone.utc)},
+                "$inc": {"message_count": 1}
+            }
+        )
+        
+        return ChatResponse(
+            response=response,
+            session_id=session_id,
+            message_id=message_id,
+            tokens_used=None
+        )
+        
+    except Exception as e:
+        logger.error(f"Chat error for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor ao processar consulta")
+
+@api_router.get("/chat/history")
+async def get_chat_history(
+    session_id: Optional[str] = None,
+    limit: int = 50,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        query = {"user_id": user_id}
+        if session_id:
+            query["session_id"] = session_id
+        
+        messages = await db.chat_messages.find(query)\
+            .sort("created_at", -1)\
+            .limit(limit)\
+            .to_list(limit)
+        
+        return messages
+        
+    except Exception as e:
+        logger.error(f"Error fetching chat history for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar histórico de chat")
+
+@api_router.get("/chat/sessions")
+async def get_chat_sessions(user_id: str = Depends(get_current_user)):
+    try:
+        sessions = await db.chat_sessions.find({"user_id": user_id})\
+            .sort("updated_at", -1)\
+            .to_list(100)
+        
+        return sessions
+        
+    except Exception as e:
+        logger.error(f"Error fetching chat sessions for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar sessões de chat")
+
+@api_router.get("/chat/{session_id}/messages")
+async def get_session_messages(
+    session_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Verify session belongs to user
+        session = await db.chat_sessions.find_one({"id": session_id, "user_id": user_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+        
+        messages = await db.chat_messages.find({"session_id": session_id, "user_id": user_id})\
+            .sort("created_at", 1)\
+            .to_list(1000)
+        
+        return messages
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching session messages for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar mensagens da sessão")
+
+@api_router.post("/chat/{session_id}/export-pdf")
+async def export_chat_to_pdf(
+    session_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Verify session belongs to user
+        session = await db.chat_sessions.find_one({"id": session_id, "user_id": user_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+        
+        # Get user info
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Get all messages from session
+        messages = await db.chat_messages.find({"session_id": session_id, "user_id": user_id})\
+            .sort("created_at", 1)\
+            .to_list(1000)
+        
+        if not messages:
+            raise HTTPException(status_code=404, detail="Nenhuma mensagem encontrada na sessão")
+        
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=30,
+            textColor=HexColor('#2ECC71')
+        )
+        
+        user_style = ParagraphStyle(
+            'UserMessage',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceAfter=15,
+            leftIndent=20,
+            textColor=HexColor('#1A2930'),
+            backColor=HexColor('#F0F8F0')
+        )
+        
+        ai_style = ParagraphStyle(
+            'AIResponse',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceAfter=15,
+            leftIndent=20,
+            textColor=HexColor('#2D3748')
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Header
+        story.append(Paragraph("Growen - Consultoria com IA", title_style))
+        story.append(Paragraph(f"Sessão: {session['title']}", styles['Heading2']))
+        story.append(Paragraph(f"Cliente: {user['name']}", styles['Normal']))
+        story.append(Paragraph(f"Data: {session['created_at'].strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        story.append(Spacer(1, 20))
+        
+        # Messages
+        for i, msg in enumerate(messages, 1):
+            story.append(Paragraph(f"<b>Pergunta {i}:</b>", styles['Heading3']))
+            story.append(Paragraph(msg['message'], user_style))
+            story.append(Spacer(1, 10))
+            
+            story.append(Paragraph("<b>Resposta Growen IA:</b>", styles['Heading3']))
+            story.append(Paragraph(msg['response'], ai_style))
+            story.append(Spacer(1, 20))
+        
+        # Footer
+        story.append(Spacer(1, 30))
+        story.append(Paragraph("© 2025 Growen - Smart Business Consulting", styles['Normal']))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Return PDF
+        buffer.seek(0)
+        
+        return StreamingResponse(
+            io.BytesIO(buffer.getvalue()),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=growen-consultoria-{session_id[:8]}.pdf"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting chat to PDF for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao exportar chat para PDF")
+
+@api_router.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(
+    session_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    try:
+        # Verify session belongs to user
+        session = await db.chat_sessions.find_one({"id": session_id, "user_id": user_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Sessão não encontrada")
+        
+        # Delete session and all its messages
+        await db.chat_sessions.delete_one({"id": session_id, "user_id": user_id})
+        await db.chat_messages.delete_many({"session_id": session_id, "user_id": user_id})
+        
+        return {"message": "Sessão deletada com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting chat session for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao deletar sessão de chat")
+
 # Include the router in the main app
 app.include_router(api_router)
 
