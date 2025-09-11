@@ -2095,6 +2095,7 @@ function App() {
             <Route path="/sobre" element={<SobrePage />} />
             <Route path="/como-usar" element={<ComoUsarPage />} />
             <Route path="/parceiros" element={<ParceirosPage />} />
+            <Route path="/contatos" element={<ContatosPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/dashboard/success" element={<SuccessPage />} />
