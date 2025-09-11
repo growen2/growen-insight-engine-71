@@ -1529,26 +1529,52 @@ const Dashboard = () => {
       const token = localStorage.getItem('growen_token');
       const response = await axios.post(`${API}/chat`, {
         message: currentMessage,
-        session_id: currentSessionId
+        session_id: currentSessionId,
+        model: 'gpt-4o-mini'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setCurrentSessionId(response.data.session_id);
-      setChatMessages(prev => [{
-        id: Date.now(),
+      
+      // Add message to local state for immediate UI update
+      const newMessage = {
+        id: response.data.message_id,
         message: currentMessage,
         response: response.data.response,
-        timestamp: new Date().toISOString(),
-        topic: response.data.topic
-      }, ...prev]);
+        created_at: new Date().toISOString()
+      };
+      setChatMessages(prev => [newMessage, ...prev]);
+      
       setCurrentMessage('');
+      fetchChatSessions(); // Refresh sessions
       toast.success('Resposta recebida!');
     } catch (error) {
       const message = error.response?.data?.detail || 'Erro ao enviar mensagem';
       toast.error(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const exportChatToPDF = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('growen_token');
+      const response = await axios.post(`${API}/chat/${sessionId}/export-pdf`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `growen-consultoria-${sessionId.substring(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao exportar PDF');
     }
   };
 
