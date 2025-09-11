@@ -2106,6 +2106,658 @@ const DashboardContent = ({ data }) => {
   );
 };
 
+// COMPREHENSIVE ADMIN DASHBOARD COMPONENT
+const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [loading, setLoading] = useState(false);
+  
+  // Admin data states
+  const [dashboardData, setDashboardData] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  
+  // Check if user is admin
+  useEffect(() => {
+    if (user && !user.is_admin) {
+      navigate('/dashboard');
+      return;
+    }
+    
+    if (activeTab === 'overview') {
+      fetchDashboardOverview();
+    }
+  }, [user, activeTab]);
+
+  const fetchDashboardOverview = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('growen_token');
+      const response = await axios.get(`${API}/admin/dashboard/overview`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDashboardData(response.data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Erro ao carregar dados do dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('growen_token');
+      const response = await axios.get(`${API}/admin/users/all?limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(response.data.users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Erro ao carregar usuários');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('growen_token');
+      const response = await axios.get(`${API}/admin/payments/all?limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPayments(response.data.payments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast.error('Erro ao carregar pagamentos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approvePayment = async (paymentId, notes = '') => {
+    try {
+      const token = localStorage.getItem('growen_token');
+      await axios.post(`${API}/admin/payments/${paymentId}/approve`, 
+        { notes }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Pagamento aprovado com sucesso!');
+      fetchPayments(); // Refresh payments
+      fetchDashboardOverview(); // Refresh overview
+    } catch (error) {
+      toast.error('Erro ao aprovar pagamento');
+    }
+  };
+
+  const rejectPayment = async (paymentId, notes) => {
+    try {
+      const token = localStorage.getItem('growen_token');
+      await axios.post(`${API}/admin/payments/${paymentId}/reject`, 
+        { notes }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Pagamento rejeitado');
+      fetchPayments(); // Refresh payments
+    } catch (error) {
+      toast.error('Erro ao rejeitar pagamento');
+    }
+  };
+
+  const updateUser = async (userId, userData) => {
+    try {
+      const token = localStorage.getItem('growen_token');
+      await axios.put(`${API}/admin/users/${userId}`, userData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Usuário atualizado com sucesso!');
+      fetchUsers(); // Refresh users
+    } catch (error) {
+      toast.error('Erro ao atualizar usuário');
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm('Tem certeza que deseja deletar este usuário? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('growen_token');
+      await axios.delete(`${API}/admin/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Usuário deletado com sucesso!');
+      fetchUsers(); // Refresh users
+      fetchDashboardOverview(); // Refresh overview
+    } catch (error) {
+      toast.error('Erro ao deletar usuário');
+    }
+  };
+
+  const adminTabs = [
+    { id: 'overview', name: 'Visão Geral', icon: BarChart3 },
+    { id: 'users', name: 'Usuários', icon: Users },
+    { id: 'payments', name: 'Pagamentos', icon: CreditCard },
+    { id: 'content', name: 'Conteúdo', icon: FileText },
+    { id: 'settings', name: 'Configurações', icon: Settings },
+    { id: 'analytics', name: 'Analytics', icon: TrendingUp }
+  ];
+
+  if (!user?.is_admin) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">Acesso Negado</h1>
+          <p className="text-slate-600 mb-6">Você não tem permissão para acessar o painel administrativo.</p>
+          <Button onClick={() => navigate('/dashboard')} className="bg-emerald-600 hover:bg-emerald-700">
+            Voltar ao Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Admin Header */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="ml-2 text-xl font-bold text-slate-900">Admin Panel</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-slate-600">Bem-vindo, {user?.name}</span>
+              <Button onClick={() => navigate('/dashboard')} variant="outline" size="sm">
+                Dashboard Normal
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Admin Navigation */}
+        <div className="mb-8">
+          <nav className="flex space-x-8 overflow-x-auto">
+            {adminTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === 'users') fetchUsers();
+                    if (tab.id === 'payments') fetchPayments();
+                  }}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'bg-red-100 text-red-700'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 mr-2" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Admin Content */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          </div>
+        )}
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && dashboardData && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Visão Geral da Plataforma</h2>
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-600">Total de Usuários</p>
+                    <p className="text-2xl font-bold text-slate-900">{dashboardData.users.total}</p>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-600">Receita Total</p>
+                    <p className="text-2xl font-bold text-slate-900">{dashboardData.payments.total_revenue.toLocaleString()} Kz</p>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-600">Pagamentos Pendentes</p>
+                    <p className="text-2xl font-bold text-slate-900">{dashboardData.payments.pending}</p>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-slate-600">Consultas IA</p>
+                    <p className="text-2xl font-bold text-slate-900">{dashboardData.activity.total_chats}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Plans Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribuição de Planos</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Gratuito</span>
+                    <span className="font-semibold">{dashboardData.users.free}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Starter</span>
+                    <span className="font-semibold">{dashboardData.users.starter}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Profissional</span>
+                    <span className="font-semibold">{dashboardData.users.pro}</span>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Atividade Recente</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Novos Usuários (30d)</span>
+                    <span className="font-semibold">{dashboardData.users.recent_registrations}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Consultas IA (7d)</span>
+                    <span className="font-semibold">{dashboardData.activity.recent_chats}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Relatórios (7d)</span>
+                    <span className="font-semibold">{dashboardData.activity.recent_reports}</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-900">Gerenciar Usuários</h2>
+              <Button onClick={fetchUsers} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
+            
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Usuário
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Plano
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Atividade
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Data Criação
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {users.map((user) => (
+                      <tr key={user.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                            <div className="text-sm text-slate-500">{user.email}</div>
+                            <div className="text-xs text-slate-400">{user.company}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.plan === 'pro' ? 'bg-purple-100 text-purple-800' :
+                            user.plan === 'starter' ? 'bg-blue-100 text-blue-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {user.plan === 'pro' ? 'Profissional' : 
+                             user.plan === 'starter' ? 'Starter' : 'Gratuito'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          <div>Chats: {user.total_chats}</div>
+                          <div>Clientes: {user.total_clients}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <Button
+                            onClick={() => {
+                              const newPlan = prompt('Novo plano (free, starter, pro):', user.plan);
+                              if (newPlan && ['free', 'starter', 'pro'].includes(newPlan)) {
+                                updateUser(user.id, { plan: newPlan });
+                              }
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            onClick={() => deleteUser(user.id)}
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === 'payments' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-900">Gerenciar Pagamentos</h2>
+              <Button onClick={fetchPayments} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
+            
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Plano
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Valor
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Data
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {payments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">
+                              {payment.user_info?.name}
+                            </div>
+                            <div className="text-sm text-slate-500">
+                              {payment.user_info?.email}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              {payment.user_info?.company}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-medium text-slate-900">
+                            {payment.plan_id === 'starter' ? 'Starter' : 'Profissional'}
+                          </span>
+                          <div className="text-xs text-slate-500">
+                            Atual: {payment.user_info?.current_plan || 'free'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                          {payment.amount.toLocaleString()} Kz
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            payment.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            payment.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {payment.status === 'approved' ? 'Aprovado' :
+                             payment.status === 'rejected' ? 'Rejeitado' : 'Pendente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(payment.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          {payment.status === 'pending' && (
+                            <>
+                              <Button
+                                onClick={() => approvePayment(payment.id)}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Aprovar
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  const reason = prompt('Motivo da rejeição:');
+                                  if (reason) rejectPayment(payment.id, reason);
+                                }}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="w-3 h-3 mr-1" />
+                                Rejeitar
+                              </Button>
+                            </>
+                          )}
+                          {payment.file_path && (
+                            <Button
+                              onClick={() => window.open(`${API}/uploads/payment_proofs/${payment.file_path.split('/').pop()}`, '_blank')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Content Management Tab */}
+        {activeTab === 'content' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Gerenciar Conteúdo</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Página Inicial</h3>
+                <p className="text-slate-600 text-sm mb-4">Editar conteúdo da landing page</p>
+                <Button className="w-full">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Página Sobre</h3>
+                <p className="text-slate-600 text-sm mb-4">Editar informações da empresa</p>
+                <Button className="w-full">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Contatos</h3>
+                <p className="text-slate-600 text-sm mb-4">Atualizar informações de contato</p>
+                <Button className="w-full">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Configurações do Sistema</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Informações da Plataforma</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Nome da Plataforma</Label>
+                    <Input defaultValue="Growen" />
+                  </div>
+                  <div>
+                    <Label>Tagline</Label>
+                    <Input defaultValue="Smart Business Consulting" />
+                  </div>
+                  <Button className="w-full">Salvar Alterações</Button>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Configurações de Contato</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Email</Label>
+                    <Input defaultValue="contato@growen.com" />
+                  </div>
+                  <div>
+                    <Label>Telefone/WhatsApp</Label>
+                    <Input defaultValue="+244 943 201 590" />
+                  </div>
+                  <div>
+                    <Label>Endereço</Label>
+                    <Input defaultValue="Luanda, Angola" />
+                  </div>
+                  <Button className="w-full">Salvar Alterações</Button>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Configurações de Pagamento</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Banco</Label>
+                    <Input defaultValue="Banco Económico" />
+                  </div>
+                  <div>
+                    <Label>Conta</Label>
+                    <Input defaultValue="001234567890123" />
+                  </div>
+                  <div>
+                    <Label>IBAN</Label>
+                    <Input defaultValue="AO06 0040 0000 1234 5678 9012 3" />
+                  </div>
+                  <Button className="w-full">Salvar Alterações</Button>
+                </div>
+              </Card>
+              
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Configurações de IA</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Modelo</Label>
+                    <Input defaultValue="gpt-4o-mini" />
+                  </div>
+                  <div>
+                    <Label>Max Tokens</Label>
+                    <Input type="number" defaultValue="1000" />
+                  </div>
+                  <div>
+                    <Label>Temperature</Label>
+                    <Input type="number" step="0.1" defaultValue="0.7" />
+                  </div>
+                  <Button className="w-full">Salvar Alterações</Button>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Analytics da Plataforma</h2>
+            <Card className="p-6">
+              <p className="text-slate-600">Analytics detalhados em breve...</p>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Continue with the remaining components...
 // [Due to length constraints, will continue in next message with:]
 // - ConsultoriaContent (enhanced)
