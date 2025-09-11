@@ -1234,7 +1234,7 @@ async def get_user_plan_info(user_id: str):
     
     monthly_chats = await db.chat_messages.count_documents({
         "user_id": user_id,
-        "timestamp": {"$gte": current_month}
+        "created_at": {"$gte": current_month}
     })
     
     monthly_reports = await db.reports.count_documents({
