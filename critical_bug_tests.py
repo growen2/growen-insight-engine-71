@@ -18,7 +18,8 @@ from io import BytesIO
 
 # Configuration
 BASE_URL = "https://growen-consult.preview.emergentagent.com/api"
-TEST_USER_EMAIL = "bugtest@growen.com"
+import time
+TEST_USER_EMAIL = f"bugtest{int(time.time())}@growen.com"
 TEST_USER_PASSWORD = "testpass123"
 TEST_USER_NAME = "Bug Test User"
 TEST_COMPANY = "Bug Test Company Angola"
