@@ -1199,7 +1199,7 @@ async def get_dashboard_chart_data(user_id: str):
         
         chats_count = await db.chat_messages.count_documents({
             "user_id": user_id,
-            "timestamp": {"$gte": month_start, "$lt": month_end}
+            "created_at": {"$gte": month_start, "$lt": month_end}
         })
         
         reports_count = await db.reports.count_documents({
