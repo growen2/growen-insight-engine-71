@@ -459,7 +459,7 @@ async def check_plan_limits(user_id: str, feature: str) -> bool:
             return True
         current_count = await db.chat_messages.count_documents({
             "user_id": user_id,
-            "timestamp": {"$gte": datetime.now(timezone.utc).replace(day=1)}
+            "created_at": {"$gte": datetime.now(timezone.utc).replace(day=1)}
         })
         return current_count < limits["ai_chats"]
     
