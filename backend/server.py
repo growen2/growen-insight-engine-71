@@ -219,6 +219,30 @@ class ChatResponse(BaseModel):
     message_id: str
     tokens_used: Optional[int] = None
 
+# Payment Models
+class PaymentProof(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    plan_id: str  # starter, pro
+    amount: float
+    file_path: str
+    payment_method: str = "bank_transfer"
+    status: str = "pending"  # pending, approved, rejected
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None  # admin user id
+
+class PaymentProofCreate(BaseModel):
+    plan_id: str
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
+
+class PaymentReview(BaseModel):
+    status: str  # approved, rejected
+    notes: Optional[str] = None
+
 # Partnership Models
 class Partner(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
