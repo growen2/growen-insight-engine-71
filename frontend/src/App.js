@@ -420,7 +420,7 @@ const LandingPage = () => {
                   <CheckCircle className="w-4 h-4 text-emerald-600 mr-3" />
                   <span className="text-sm">Suporte prioritário</span>
                 </div>
-                <Button className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700" onClick={() => window.location.href = '#auth'}>
+                <Button className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700" onClick={handleGetStarted}>
                   Iniciar Pro
                 </Button>
               </CardContent>
