@@ -923,6 +923,27 @@ def run_all_tests():
     test_results.append(("Payment Upload", test_payment_upload()))
     test_results.append(("Payment Status", test_payment_status()))
     
+    # CRM Communication Tests
+    print("\n👥 CRM COMMUNICATION TESTS")
+    print("-" * 30)
+    create_test_client()
+    test_results.append(("Email Templates", test_email_templates()))
+    test_results.append(("Send Email to Client", test_send_email_to_client()))
+    test_results.append(("Client Call Link", test_client_call_link()))
+    
+    # Reports System Tests
+    print("\n📊 REPORTS SYSTEM TESTS")
+    print("-" * 30)
+    test_results.append(("Custom Report Generation", test_generate_custom_report()))
+    test_results.append(("CSV Upload Analysis", test_csv_upload()))
+    test_results.append(("Get User Reports", test_get_reports()))
+    test_results.append(("Report PDF Export", test_report_pdf_export()))
+    
+    # WhatsApp Integration Tests
+    print("\n💬 WHATSAPP INTEGRATION TESTS")
+    print("-" * 30)
+    test_results.append(("WhatsApp Configuration", test_whatsapp_config()))
+    
     # Admin Tests
     print("\n👑 ADMIN FUNCTIONALITY TESTS")
     print("-" * 30)
