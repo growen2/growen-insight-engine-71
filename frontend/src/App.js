@@ -2129,6 +2129,7 @@ function App() {
             <Route path="/parceiros" element={<ParceirosPage />} />
             <Route path="/contatos" element={<ContatosPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/dashboard/success" element={<SuccessPage />} />
           </Routes>
