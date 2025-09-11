@@ -1495,7 +1495,7 @@ async def get_session_messages(
         if not session:
             raise HTTPException(status_code=404, detail="Sessão não encontrada")
         
-        messages = await db.chat_messages.find({"session_id": session_id, "user_id": user_id})\
+        messages = await db.chat_messages.find({"session_id": session_id, "user_id": user_id}, {"_id": 0})\
             .sort("created_at", 1)\
             .to_list(1000)
         
