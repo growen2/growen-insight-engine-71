@@ -957,12 +957,28 @@ export const PlanosContent = ({ user }) => {
                   Gratuito
                 </Button>
               ) : (
-                <Button 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700" 
-                  onClick={() => upgradePlan(planId)}
-                >
-                  Fazer Upgrade
-                </Button>
+                <div className="flex flex-col space-y-3">
+                  <Button 
+                    onClick={() => handleUpgrade(planId)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    disabled={loading}
+                  >
+                    {loading ? 'Processando...' : 'Escolher Plano'}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      const whatsappNumber = "+244943201590";
+                      const message = encodeURIComponent(`Olá! Gostaria de alterar meu plano para ${plans[planId].name} (${plans[planId].price_aoa.toLocaleString()} Kz/mês). Podem me ajudar com esse processo?`);
+                      window.open(`https://wa.me/${whatsappNumber.replace('+', '')}?text=${message}`, '_blank');
+                    }}
+                    variant="outline"
+                    className="w-full text-green-600 border-green-600 hover:bg-green-50"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Falar via WhatsApp
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
