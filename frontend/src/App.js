@@ -2415,14 +2415,7 @@ const Dashboard = () => {
           {activeTab === 'admin' && user?.is_admin && <AdminContent />}
         </main>
       </div>
-      
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+
     </div>
   );
 };
