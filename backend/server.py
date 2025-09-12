@@ -3546,6 +3546,66 @@ async def get_page_content_admin(
         logger.error(f"Error fetching page content {page_name}: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao buscar conteúdo da página")
 
+# PARTNER LOGO UPLOAD ENDPOINT
+@api_router.post("/partners/{partner_id}/upload-logo")
+async def upload_partner_logo(
+    partner_id: str,
+    logo: UploadFile = File(...)
+):
+    try:
+        # Check if partner exists
+        partner = await db.partners.find_one({"id": partner_id})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Parceiro não encontrado")
+        
+        # Validate file type
+        allowed_types = ["image/jpeg", "image/png", "image/jpg", "image/webp"]
+        if logo.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tipo de arquivo não suportado. Use JPEG, PNG ou WebP."
+            )
+        
+        # Check file size (max 2MB)
+        MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB in bytes
+        logo_content = await logo.read()
+        if len(logo_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 2MB.")
+        
+        # Create logos directory if it doesn't exist
+        logos_dir = Path("/app/uploads/partner_logos")
+        logos_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate unique filename
+        file_extension = logo.filename.split('.')[-1] if '.' in logo.filename else 'jpg'
+        unique_filename = f"{partner_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+        logo_path = logos_dir / unique_filename
+        
+        # Save file
+        async with aiofiles.open(logo_path, 'wb') as f:
+            await f.write(logo_content)
+        
+        # Update partner with logo URL
+        logo_url = f"/uploads/partner_logos/{unique_filename}"
+        await db.partners.update_one(
+            {"id": partner_id},
+            {"$set": {
+                "logo_url": logo_url,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        return {
+            "message": "Logo uploaded successfully!",
+            "logo_url": logo_url
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading partner logo {partner_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao fazer upload do logo")
+
 # Invoice Management System
 @api_router.post("/invoices/generate")
 async def generate_invoice(
