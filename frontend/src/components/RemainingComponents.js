@@ -822,6 +822,7 @@ export const AdminContent = () => {
 export const PlanosContent = ({ user }) => {
   const currentPlan = user?.plan || 'free';
   const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [loading, setLoading] = useState(false);
 
   const plans = {
     free: {
