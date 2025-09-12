@@ -867,6 +867,10 @@ export const PlanosContent = ({ user }) => {
     }
   };
 
+  const handleUpgrade = (planId) => {
+    upgradePlan(planId);
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
