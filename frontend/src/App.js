@@ -904,7 +904,469 @@ const ComoUsarPage = () => {
   );
 };
 
-// Parceiros Page Component
+// Partner Card Component with Logo Support
+const PartnerCard = ({ partner }) => {
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [userRating, setUserRating] = useState(5);
+  const [userReview, setUserReview] = useState('');
+
+  const handleRatePartner = async () => {
+    try {
+      const token = localStorage.getItem('growen_token');
+      await axios.post(`${API}/partners/${partner.id}/rate`, {
+        rating: userRating,
+        review: userReview
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Avaliação enviada com sucesso!');
+      setShowRatingDialog(false);
+      setUserReview('');
+      // Refresh partner data would go here
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Faça login para avaliar parceiros');
+      } else {
+        toast.error('Erro ao enviar avaliação');
+      }
+    }
+  };
+
+  return (
+    <>
+      <Card className="h-full hover:shadow-lg transition-shadow duration-300">
+        <CardContent className="p-6">
+          {/* Logo and Header */}
+          <div className="flex items-start space-x-4 mb-4">
+            <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+              {partner.logo_url ? (
+                <img 
+                  src={partner.logo_url} 
+                  alt={`${partner.name} logo`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentNode.innerHTML = `<div class="w-full h-full bg-emerald-100 flex items-center justify-center"><span class="text-emerald-600 font-bold text-lg">${partner.name.charAt(0)}</span></div>`;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-emerald-100 flex items-center justify-center">
+                  <span className="text-emerald-600 font-bold text-lg">{partner.name.charAt(0)}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-slate-900 truncate">{partner.name}</h3>
+              <Badge variant="outline" className="text-xs mt-1">
+                {partner.category}
+              </Badge>
+              {partner.location && (
+                <p className="text-xs text-slate-500 mt-1">{partner.location}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          <p className="text-slate-600 text-sm mb-4 line-clamp-3">
+            {partner.description}
+          </p>
+
+          {/* Services */}
+          {partner.services && partner.services.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-medium text-slate-700 mb-2">Serviços:</p>
+              <div className="flex flex-wrap gap-1">
+                {partner.services.slice(0, 3).map((service, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {service}
+                  </Badge>
+                ))}
+                {partner.services.length > 3 && (
+                  <Badge variant="secondary" className="text-xs">
+                    +{partner.services.length - 3}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Rating */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= (partner.rating || 0)
+                        ? 'text-yellow-400 fill-current'
+                        : 'text-slate-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-slate-600">
+                {partner.rating ? partner.rating.toFixed(1) : 'Sem avaliações'}
+              </span>
+              <span className="text-xs text-slate-500">
+                ({partner.reviews_count || 0} avaliações)
+              </span>
+            </div>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRatingDialog(true)}
+              className="text-xs"
+            >
+              <Star className="w-3 h-3 mr-1" />
+              Avaliar
+            </Button>
+          </div>
+
+          {/* Contact Actions */}
+          <div className="flex space-x-2">
+            {partner.website && (
+              <Button size="sm" variant="outline" className="flex-1" asChild>
+                <a href={partner.website} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Site
+                </a>
+              </Button>
+            )}
+            
+            <Button size="sm" variant="outline" className="flex-1" asChild>
+              <a href={`mailto:${partner.email}`}>
+                <Mail className="w-3 h-3 mr-1" />
+                Email
+              </a>
+            </Button>
+            
+            {partner.phone && (
+              <Button size="sm" variant="outline" className="flex-1" asChild>
+                <a href={`https://wa.me/${partner.phone.replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Vi seu perfil no marketplace da Growen e gostaria de saber mais sobre seus serviços.')}`} target="_blank">
+                  <MessageCircle className="w-3 h-3 mr-1" />
+                  WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rating Dialog */}
+      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Avaliar {partner.name}</DialogTitle>
+            <DialogDescription>
+              Compartilhe sua experiência com este parceiro
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Sua avaliação</Label>
+              <div className="flex items-center space-x-1 mt-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setUserRating(star)}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      className={`w-6 h-6 cursor-pointer transition-colors ${
+                        star <= userRating
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-slate-300 hover:text-yellow-200'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="review">Comentário (opcional)</Label>
+              <Textarea
+                id="review"
+                value={userReview}
+                onChange={(e) => setUserReview(e.target.value)}
+                placeholder="Conte sobre sua experiência..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowRatingDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleRatePartner} className="bg-emerald-600 hover:bg-emerald-700">
+                Enviar Avaliação
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+// Partner Registration Form Component
+const PartnerRegistrationForm = ({ onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    category: '',
+    description: '',
+    website: '',
+    services: '',
+    location: ''
+  });
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const categories = [
+    'contabilidade',
+    'juridico', 
+    'marketing',
+    'tecnologia',
+    'consultoria',
+    'design',
+    'financeiro',
+    'recursos_humanos'
+  ];
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast.error('Imagem muito grande. Máximo 2MB.');
+        return;
+      }
+      
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // First, create the partner
+      const partnerData = {
+        ...formData,
+        services: formData.services.split(',').map(s => s.trim()).filter(s => s)
+      };
+
+      const response = await axios.post(`${API}/partners`, partnerData);
+      const partnerId = response.data.id;
+
+      // If there's a logo, upload it
+      if (logoFile) {
+        const logoFormData = new FormData();
+        logoFormData.append('logo', logoFile);
+        
+        try {
+          await axios.post(`${API}/partners/${partnerId}/upload-logo`, logoFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+        } catch (logoError) {
+          console.warn('Logo upload failed:', logoError);
+          // Don't fail the whole process if logo upload fails
+        }
+      }
+
+      onSuccess();
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Erro ao cadastrar parceiro';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="name">Nome da Empresa *</Label>
+          <Input
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="phone">Telefone/WhatsApp</Label>
+          <Input
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            placeholder="+244..."
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="category">Categoria *</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="description">Descrição dos Serviços *</Label>
+        <Textarea
+          id="description"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          placeholder="Descreva os serviços que sua empresa oferece..."
+          rows={3}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="website">Website</Label>
+          <Input
+            id="website"
+            name="website"
+            value={formData.website}
+            onChange={handleInputChange}
+            placeholder="https://..."
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="location">Localização</Label>
+          <Input
+            id="location"
+            name="location"
+            value={formData.location}
+            onChange={handleInputChange}
+            placeholder="Luanda, Angola"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="services">Serviços Específicos</Label>
+        <Input
+          id="services"
+          name="services"
+          value={formData.services}
+          onChange={handleInputChange}
+          placeholder="Contabilidade fiscal, Auditoria, Consultoria tributária (separados por vírgula)"
+        />
+      </div>
+
+      {/* Logo Upload */}
+      <div>
+        <Label htmlFor="logo">Logo da Empresa</Label>
+        <div className="mt-2 space-y-3">
+          <Input
+            id="logo"
+            type="file"
+            accept="image/*"
+            onChange={handleLogoChange}
+            className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+          />
+          {logoPreview && (
+            <div className="flex items-center space-x-3">
+              <img 
+                src={logoPreview} 
+                alt="Preview do logo" 
+                className="w-16 h-16 object-cover rounded-lg border"
+              />
+              <div>
+                <p className="text-sm text-slate-600">Preview do logo</p>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setLogoFile(null);
+                    setLogoPreview('');
+                  }}
+                >
+                  Remover
+                </Button>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-slate-500">
+            Recomendado: 200x200px, máximo 2MB (JPG, PNG)
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          className="bg-emerald-600 hover:bg-emerald-700"
+          disabled={loading}
+        >
+          {loading ? 'Cadastrando...' : 'Enviar Cadastro'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Partners Page Component
 const ParceirosPage = () => {
   const navigate = useNavigate();
   const [partners, setPartners] = useState([]);
