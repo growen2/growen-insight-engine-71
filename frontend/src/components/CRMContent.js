@@ -32,6 +32,140 @@ const emailSchema = z.object({
   content: z.string().min(10, 'Conteúdo deve ter pelo menos 10 caracteres'),
 });
 
+// Create Invoice Form Component
+const CreateInvoiceForm = ({ clients, onClose, onSuccess }) => {
+  const [selectedClient, setSelectedClient] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('Consultoria Empresarial com IA');
+  const [quantity, setQuantity] = useState(1);
+  const [unitPrice, setUnitPrice] = useState(15000);
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const totalAmount = quantity * unitPrice;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedClient) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('growen_token');
+      const response = await axios.post(`${API}/invoices/generate`, {
+        client_id: selectedClient,
+        service_description: serviceDescription,
+        quantity: quantity,
+        unit_price: unitPrice,
+        notes: notes
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      onSuccess();
+      toast.success(`Fatura ${response.data.invoice_number} criada com sucesso!`);
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Erro ao criar fatura';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="client">Cliente *</Label>
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um cliente ativo" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name} - {client.company || 'Sem empresa'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="unitPrice">Preço Unitário (Kz) *</Label>
+          <Input
+            id="unitPrice"
+            type="number"
+            value={unitPrice}
+            onChange={(e) => setUnitPrice(Number(e.target.value))}
+            placeholder="15000"
+            min="0"
+            step="100"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="serviceDescription">Descrição do Serviço *</Label>
+        <Input
+          id="serviceDescription"
+          value={serviceDescription}
+          onChange={(e) => setServiceDescription(e.target.value)}
+          placeholder="Consultoria Empresarial com IA"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="quantity">Quantidade *</Label>
+          <Input
+            id="quantity"
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            min="1"
+          />
+        </div>
+
+        <div>
+          <Label>Valor Total</Label>
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md">
+            <span className="text-xl font-bold text-emerald-700">
+              {totalAmount.toLocaleString()} Kz
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="notes">Observações (opcional)</Label>
+        <Textarea
+          id="notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Observações adicionais para a fatura..."
+          rows={3}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          className="bg-emerald-600 hover:bg-emerald-700"
+          disabled={loading}
+        >
+          {loading ? 'Criando...' : 'Criar Fatura'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 const CRMContent = ({ clients, fetchClients }) => {
   const [showAddClient, setShowAddClient] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
