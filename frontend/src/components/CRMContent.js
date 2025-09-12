@@ -38,6 +38,7 @@ const CRMContent = ({ clients, fetchClients }) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [emailTemplates, setEmailTemplates] = useState([]);
+  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
 
   const clientForm = useForm({
     resolver: zodResolver(clientSchema),
