@@ -335,6 +335,26 @@ const CRMContent = ({ clients, fetchClients }) => {
         </DialogContent>
       </Dialog>
 
+      {/* Create Invoice Modal */}
+      <Dialog open={showCreateInvoice} onOpenChange={setShowCreateInvoice}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Nova Fatura</DialogTitle>
+            <DialogDescription>
+              Gere uma fatura profissional para um cliente ativo
+            </DialogDescription>
+          </DialogHeader>
+          <CreateInvoiceForm 
+            clients={clients.filter(c => c.status === 'cliente_ativo')} 
+            onClose={() => setShowCreateInvoice(false)}
+            onSuccess={() => {
+              setShowCreateInvoice(false);
+              toast.success('Fatura criada com sucesso!');
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
         <DialogContent className="max-w-2xl">
