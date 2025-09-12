@@ -607,7 +607,7 @@ const LandingPage = () => {
                 <li><a href="#" className="hover:text-white transition-colors">Central de Ajuda</a></li>
                 <li><a href="mailto:suporte@growen.com" className="hover:text-white transition-colors">Contato</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
-                <li><a href="https://wa.me/244924123456" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center">
+                <li><a href="https://wa.me/244943201590" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center">
                   <MessageCircle className="w-4 h-4 mr-1" />
                   WhatsApp
                 </a></li>
