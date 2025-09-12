@@ -846,6 +846,7 @@ export const PlanosContent = ({ user }) => {
   };
 
   const upgradePlan = async (planId) => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('growen_token');
       const response = await axios.post(`${API}/payments/checkout/session`, {
@@ -861,6 +862,8 @@ export const PlanosContent = ({ user }) => {
     } catch (error) {
       const message = error.response?.data?.detail || 'Erro ao processar pagamento';
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
