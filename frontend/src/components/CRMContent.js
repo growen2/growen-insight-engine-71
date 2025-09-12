@@ -11,7 +11,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { UserPlus, Edit, Trash2, Phone, Mail, MessageCircle, ExternalLink } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Phone, Mail, MessageCircle, ExternalLink, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
