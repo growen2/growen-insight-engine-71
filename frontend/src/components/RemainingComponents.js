@@ -17,7 +17,7 @@ import {
   FileText, Download, Upload, Eye, Calendar, Filter, Plus, 
   Users, ShieldCheck, Settings, BarChart3, DollarSign, 
   AlertCircle, CheckCircle, Activity, TrendingUp, Mail, 
-  CreditCard, Clock, Award, Star, Building
+  CreditCard, Clock, Award, Star, Building, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
