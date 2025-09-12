@@ -194,10 +194,20 @@ const CRMContent = ({ clients, fetchClients }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gestão de Clientes</h2>
-        <Button onClick={() => setShowAddClient(true)} className="bg-emerald-600 hover:bg-emerald-700">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Adicionar Cliente
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => setShowAddClient(true)} className="bg-emerald-600 hover:bg-emerald-700">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Adicionar Cliente
+          </Button>
+          <Button 
+            onClick={() => setShowCreateInvoice(true)}
+            variant="outline"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Criar Fatura
+          </Button>
+        </div>
       </div>
       
       {/* Client Form Modal */}
