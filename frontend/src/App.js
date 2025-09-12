@@ -2372,47 +2372,57 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white px-4 shadow-sm lg:px-6">
+        {/* Top bar for mobile */}
+        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:hidden">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden"
+            className="-m-2.5 p-2.5 text-slate-700 hover:text-slate-900"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <h1 className="text-xl font-semibold text-slate-900 capitalize">{activeTab.replace('_', ' ')}</h1>
-            </div>
+          
+          <div className="flex flex-1 justify-center">
+            <h1 className="text-lg font-semibold leading-6 text-slate-900">
+              {navigation.find(item => item.id === activeTab)?.name || 'Dashboard'}
+            </h1>
           </div>
-          <Badge variant="outline" className="hidden sm:flex">
-            {dashboardData.plan_info?.name || user.plan || 'Gratuito'}
-          </Badge>
+          
+          <div className="flex items-center gap-x-4 lg:gap-x-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveTab('configuracoes')}
+              className="text-slate-700 hover:text-slate-900"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        {/* Content */}
-        <main className="p-4 lg:p-6">
-          {activeTab === 'dashboard' && <DashboardContent data={dashboardData} />}
-          {activeTab === 'consultoria' && (
-            <ConsultoriaContent
-              messages={chatMessages}
-              sessions={chatSessions}
-              currentMessage={currentMessage}
-              setCurrentMessage={setCurrentMessage}
-              sendMessage={sendMessage}
-              loading={loading}
-              exportChatToPDF={exportChatToPDF}
-            />
-          )}
-          {activeTab === 'crm' && <CRMContent clients={clients} fetchClients={fetchClients} />}
-          {activeTab === 'relatorios' && <RelatoriosContent reports={reports} fetchReports={fetchReports} />}
-          {activeTab === 'planos' && <PlanosContent user={user} />}
-          {activeTab === 'configuracoes' && <ConfiguracoesContent user={user} />}
-          {activeTab === 'admin' && user?.is_admin && <AdminContent />}
+        <main className="py-6">
+          <div className="px-4 sm:px-6 lg:px-8">
+            {activeTab === 'dashboard' && <DashboardContent />}
+            {activeTab === 'consultoria' && (
+              <ConsultoriaContent 
+                messages={chatMessages}
+                sessions={chatSessions}
+                currentMessage={currentMessage}
+                setCurrentMessage={setCurrentMessage}
+                sendMessage={sendMessage}
+                loading={loading}
+                exportChatToPDF={exportChatToPDF}
+              />
+            )}
+            {activeTab === 'crm' && <CRMContent clients={clients} fetchClients={fetchClients} />}
+            {activeTab === 'relatorios' && <RelatoriosContent reports={reports} fetchReports={fetchReports} />}
+            {activeTab === 'planos' && <PlanosContent user={user} />}
+            {activeTab === 'configuracoes' && <ConfiguracoesContent user={user} />}
+            {activeTab === 'admin' && user?.is_admin && <AdminContent />}
+          </div>
         </main>
       </div>
 
