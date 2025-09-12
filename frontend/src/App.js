@@ -2256,45 +2256,118 @@ const Dashboard = () => {
     <div className="min-h-screen bg-slate-50">
       <WhatsAppButton />
       
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-        <div className="flex items-center justify-center h-16 px-4 border-b">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold">G</span>
-          </div>
-          <span className="ml-2 text-xl font-bold text-slate-900">Growen</span>
-        </div>
-        
-        <nav className="mt-8">
-          {navigation.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setSidebarOpen(false);
-              }}
-              className={`w-full flex items-center px-6 py-3 text-left hover:bg-emerald-50 transition-colors ${
-                activeTab === item.id ? 'bg-emerald-50 text-emerald-600 border-r-2 border-emerald-600' : 'text-slate-600'
-              }`}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
-              {item.name}
-            </button>
-          ))}
-        </nav>
-        
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex items-center p-3 bg-slate-50 rounded-lg">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
-              <p className="text-xs text-slate-500 truncate">Plano {user.plan || 'Gratuito'}</p>
+      {/* Mobile sidebar */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'pointer-events-none'}`}>
+        <div className={`fixed inset-0 bg-slate-900/80 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity`} onClick={() => setSidebarOpen(false)} />
+        <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform`}>
+          {/* Mobile sidebar content */}
+          <div className="flex h-full flex-col">
+            <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-slate-200">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold">G</span>
+                </div>
+                <span className="ml-2 text-xl font-bold text-slate-900">Growen</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
             </div>
-            <Button size="sm" variant="ghost" onClick={logout}>
-              <LogOut className="w-4 h-4" />
-            </Button>
+            
+            <nav className="flex-1 px-6 py-6">
+              <ul className="space-y-1">
+                {navigation.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setSidebarOpen(false);
+                      }}
+                      className={`group flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        activeTab === item.id
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                      {item.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            
+            {/* Mobile user info */}
+            <div className="border-t border-slate-200 p-6">
+              <div className="flex items-center">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
+                  <p className="text-xs text-slate-500 truncate">Plano {user.plan || 'Gratuito'}</p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={logout} className="ml-2">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-slate-200">
+          <div className="flex h-16 shrink-0 items-center px-6 border-b border-slate-200">
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold">G</span>
+            </div>
+            <span className="ml-2 text-xl font-bold text-slate-900">Growen</span>
+          </div>
+          
+          <nav className="flex flex-1 flex-col px-6">
+            <ul className="flex flex-1 flex-col gap-y-7">
+              <li>
+                <ul className="space-y-1">
+                  {navigation.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => setActiveTab(item.id)}
+                        className={`group flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                          activeTab === item.id
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                        {item.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            </ul>
+          </nav>
+          
+          {/* Desktop user info */}
+          <div className="border-t border-slate-200 p-6">
+            <div className="flex items-center">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+              </Avatar>
+              <div className="ml-3 flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
+                <p className="text-xs text-slate-500 truncate">Plano {user.plan || 'Gratuito'}</p>
+              </div>
+              <Button size="sm" variant="ghost" onClick={logout} className="ml-2">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
